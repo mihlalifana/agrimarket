@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Earnings{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Earnings</h1><p>Buyers pay by card. Paystack pays your share straight into your bank account (usually 1 to 2 business days later) and keeps AgriMarket's {{ commission_pct }}% commission. There is nothing to settle by hand.</p></div></div>
+{% include "accounts/_payout_status.html" with farm=user.farm %}<br>
+{% if debt %}<div class="notice">You still owe <strong>{{ debt|rand }}</strong> for your part of refunds sent to buyers. It is kept back from your next card sales automatically.</div><br>{% endif %}
+<div class="card table-wrap"><table class="data"><thead><tr><th>Month</th><th class="num">Orders completed</th><th class="num">Sales (goods + VAT)</th><th class="num">AgriMarket {{ commission_pct }}%</th><th class="num">Paid to your bank</th><th class="num">Kept back for refunds</th><th class="num">Your part of refunds</th></tr></thead>
+<tbody>{% for m in months %}<tr><td>{{ m.period|date:"F Y" }}</td><td class="num">{{ m.orders }}</td><td class="num">{{ m.sales|rand }}</td><td class="num">{{ m.commission|rand }}</td><td class="num"><strong>{{ m.paid|rand }}</strong></td><td class="num">{{ m.kept_back|rand }}</td><td class="num">{{ m.refunds|rand }}</td></tr>{% endfor %}</tbody></table></div>
+<p class="small muted">A month counts the orders completed in it. "Paid to your bank" is what Paystack paid you for those orders.</p>
+{% endblock %}

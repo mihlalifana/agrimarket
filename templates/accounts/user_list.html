@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Users{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Users</h1><p>All accounts. Distributors and admins are created here; buyers and farmers register themselves.</p></div></div>
+<details class="panel" id="add-staff" {% if open_staff %}open{% endif %}><summary>+ Create a staff account (distributor or admin)</summary><div class="panel-body">
+  <form method="post" action="{% url 'accounts:create_staff' %}" novalidate class="form-grid">{% csrf_token %}{% with form=staff_form %}{% include "includes/form.html" %}{% endwith %}<div class="full"><button class="btn">Create account</button></div></form></div></details>
+<form class="card filter-bar inline-fields" method="get">
+  <input class="input" name="q" value="{{ q }}" placeholder="Name, email or farm">
+  <select class="input" name="role"><option value="">All roles</option>{% for v, l in roles %}<option value="{{ v }}" {% if v == role %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <button class="btn secondary">Filter</button>
+</form><br>
+<div class="card table-wrap"><table class="data">
+  <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Province</th><th>Status</th><th></th></tr></thead>
+  <tbody>{% for u in page %}<tr data-id="{{ u.pk }}">
+    <td>{{ u }}{% if u.is_farmer and u.farm %}<div class="small muted">{{ u.farm.farm_name }} · <span class="badge s-{{ u.farm.status }}">{{ u.farm.get_status_display }}</span></div>{% endif %}</td>
+    <td>{{ u.email }}</td><td>{{ u.get_role_display }}</td><td>{{ u.get_province_display }}</td>
+    <td>{% if u.is_active %}<span class="badge">Active</span>{% else %}<span class="badge grey">Deactivated</span>{% endif %}{% if u.is_locked %} <span class="badge danger">Locked</span>{% endif %}</td>
+    <td class="right">{% if u.is_locked %}<form method="post" action="{% url 'accounts:unlock' u.pk %}" class="inline-form">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn small secondary">Unlock</button></form> {% endif %}{% if u != user %}<form method="post" action="{% url 'accounts:toggle_active' u.pk %}" class="inline-form">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn small {% if u.is_active %}danger{% else %}secondary{% endif %}">{% if u.is_active %}Deactivate{% else %}Reactivate{% endif %}</button></form>{% endif %}</td>
+  </tr>{% empty %}<tr><td colspan="6" class="empty">No users match.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% include "includes/pagination.html" %}
+{% endblock %}

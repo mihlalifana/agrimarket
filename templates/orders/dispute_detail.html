@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Complaint{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Complaint on {{ sub.order.number }}</h1><p>{{ sub.farmer.farm.farm_name }} → {{ sub.order.buyer.get_full_name }} · goods + VAT {{ sub.goods_subtotal|add:sub.vat_amount|rand }}</p></div>
+  <a class="btn secondary" href="{% if user == sub.farmer %}{% url 'orders:suborder' sub.pk %}{% else %}{% url 'orders:order_detail' sub.order.pk %}{% endif %}">Open order</a></div>
+<div class="split">
+  <div class="card"><h2>Buyer's complaint</h2><p>{{ dispute.reason|linebreaksbr }}</p>
+    {% if dispute.photo %}<img src="{{ dispute.photo.url }}" alt="Photo from the buyer" style="max-height:320px;border-radius:8px">{% endif %}
+    <p class="small muted">Raised {{ dispute.created_at|date:"d M Y H:i" }}</p>
+    {% if dispute.status != "open" %}<hr><h3>{{ dispute.get_status_display }}</h3><p>{{ dispute.resolution_note }}</p>
+      {% for r in refunds %}<p class="small">Refund {{ r.amount|rand }}: {{ r.get_status_display|lower }} to the buyer's card. Farm's part {{ r.farm_amount|rand }}, AgriMarket's part {{ r.platform_amount|rand }}.</p>{% endfor %}{% endif %}
+  </div>
+  {% if dispute.status == "open" %}{% if user == sub.farmer %}<div class="card"><h2>Your answer</h2>
+    <p class="small muted">A refund goes back to the buyer's card through Paystack. You and AgriMarket each return your own part: AgriMarket returns its {{ commission_pct }}% on the refunded goods, and your part is kept back from your next card sales.</p>
+    <form method="post" novalidate>{% csrf_token %}{% include "includes/form.html" %}<button class="btn block">Send answer</button></form></div>
+  {% else %}<div class="card"><h2>Waiting for the farm</h2><p class="small">{{ sub.farmer.farm.farm_name }} has been asked to answer your complaint.</p></div>{% endif %}{% endif %}
+</div>
+{% endblock %}

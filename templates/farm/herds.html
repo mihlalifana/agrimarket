@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Livestock{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Livestock</h1><p>Herds and groups of animals, with their treatments and costs.</p></div></div>
+{% include "farm/_nav.html" %}
+<div class="split">
+  <div class="card table-wrap"><table class="data"><thead><tr><th>Herd</th><th>Type</th><th class="num">Animals</th><th>Since</th><th>Sale status</th></tr></thead>
+  <tbody>{% for h in rows %}<tr data-id="{{ h.pk }}"><td><a href="{% url 'farm:herd' h.pk %}"><strong>{{ h.name }}</strong></a>{% if h.breed %}<div class="small muted">{{ h.breed }}</div>{% endif %}</td><td>{{ h.commodity }}</td><td class="num">{{ h.head_count }}</td><td>{{ h.started_on|date:"M Y" }}</td>
+  <td>{% with w=h.active_withdrawal %}{% if w %}<span class="badge danger">Withdrawal until {{ w.withdrawal_ends|date:"d M" }}</span>{% else %}<span class="badge">Can be sold</span>{% endif %}{% endwith %}</td></tr>
+  {% empty %}<tr><td colspan="5" class="empty">No herds yet.</td></tr>{% endfor %}</tbody></table></div>
+  <form method="post" class="card" novalidate>{% csrf_token %}<h2>Add a herd</h2>{% include "includes/form.html" %}<button class="btn block">Add herd</button></form>
+</div>
+{% endblock %}

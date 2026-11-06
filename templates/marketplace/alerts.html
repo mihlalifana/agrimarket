@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Availability alerts{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Availability alerts</h1><p>Get an SMS and notification when a product you need is listed. Each alert fires once.</p></div></div>
+<div class="split">
+  <div class="card table-wrap"><table class="data"><thead><tr><th>Product</th><th>Province</th><th class="num">Max price</th><th>Status</th><th></th></tr></thead>
+  <tbody>{% for a in items %}<tr><td>{{ a.commodity }}</td><td>{{ a.province|default:"Any" }}</td><td class="num">{% if a.max_price %}{{ a.max_price|rand }}{% else %}Any{% endif %}</td>
+  <td>{% if a.is_active %}<span class="badge wheat">Waiting</span>{% else %}<span class="badge">Notified {{ a.notified_at|date:"d M" }}</span>{% endif %}</td>
+  <td class="right"><form method="post" action="{% url 'marketplace:alert_delete' a.pk %}">{% csrf_token %}<button class="btn danger small">Remove</button></form></td></tr>
+  {% empty %}<tr><td colspan="5" class="empty">No alerts yet.</td></tr>{% endfor %}</tbody></table></div>
+  <form method="post" class="card" novalidate>{% csrf_token %}<h2>New alert</h2>{% include "includes/form.html" %}<button class="btn block">Create alert</button></form>
+</div>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% load agri %}{% block title %}My dashboard{% endblock %}
+{% block content %}
+<div class="hero"><div><h1>Hello {{ user.first_name }}</h1><p>{{ open_subs }} open order part{{ open_subs|pluralize }} on the way.</p></div><div class="row"><a class="btn wheat" href="{% url 'marketplace:catalog' %}">Browse stock</a><a class="btn secondary" href="{% url 'orders:rfq_create' %}">Request quotes</a></div></div>
+<div class="grid grid-2" style="margin-bottom:16px">
+  <a class="card" style="text-decoration:none;color:inherit" href="{% url 'orders:rfq_list' %}"><h3>Quote requests →</h3><p class="small muted">Ask several farms to price a large order.</p></a>
+  <a class="card" style="text-decoration:none;color:inherit" href="{% url 'marketplace:alerts' %}"><h3>Availability alerts →</h3><p class="small muted">Get an SMS when a product you need is listed.</p></a>
+</div>
+{% for p in unpaid %}<div class="notice">Order <a href="{% url 'orders:order_detail' p.order.pk %}">{{ p.order.number }}</a> is waiting for your card payment ({{ p.amount|rand }}). Open it to pay or to check the payment.</div><br>{% endfor %}
+<div class="card"><h2>Recent orders</h2><table class="data"><tbody>{% for o in orders %}<tr><td><a href="{% url 'orders:order_detail' o.pk %}">{{ o.number }}</a></td><td>{{ o.order_date|date:"d M Y" }}</td><td>{% for s in o.suborders.all %}<span class="badge s-{{ s.status }}">{{ s.get_status_display }}</span> {% endfor %}</td><td class="num">{{ o.grand_total|rand }}</td></tr>{% empty %}<tr><td class="empty">No orders yet.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

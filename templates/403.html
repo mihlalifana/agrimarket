@@ -1,0 +1,2 @@
+{% extends "base.html" %}{% block title %}Access denied{% endblock %}
+{% block content %}<div class="card auth-box"><h1>Access denied</h1><p>{{ exception|default:"You do not have permission to open this page." }}</p><a class="btn" href="/dashboard/">Go to my dashboard</a></div>{% endblock %}

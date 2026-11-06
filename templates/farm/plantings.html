@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Crops{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Crops</h1><p>Each planting is one crop on one field in one season.</p></div></div>
+{% include "farm/_nav.html" %}
+<p class="small muted">Not sure what to plant? <a href="{% url 'insights:planner' %}">The planting planner</a> compares crops for each field. Harvested totals are calculated from the harvest records. When a crop reaches its expected harvest date it appears on the <a href="{% url 'farm:harvests' %}">Harvest page</a>, where you record the harvest and list it for sale.</p>
+<div class="split">
+  <div class="stack">
+    {% if seasons %}<div class="row small">Season: <a href="?" class="badge {% if not season %}{% else %}grey{% endif %}">All</a>{% for s in seasons %}<a href="?season={{ s }}" class="badge {% if s != season %}grey{% endif %}">{{ s }}</a>{% endfor %}</div>{% endif %}
+    <div class="card table-wrap"><table class="data"><thead><tr><th>Crop</th><th>Field</th><th>Season</th><th class="num">Area</th><th class="num">Expected</th><th class="num">Harvested</th><th>Status</th></tr></thead>
+    <tbody>{% for p in rows %}<tr data-id="{{ p.pk }}"><td><a href="{% url 'farm:planting' p.pk %}"><strong>{{ p.commodity }}</strong></a>{% if p.cultivar %}<div class="small muted">{{ p.cultivar }}</div>{% endif %}</td><td>{{ p.field.name }}</td><td>{{ p.season }}</td><td class="num">{{ p.area_ha }} ha</td><td class="num">{{ p.expected_yield|qty }} {{ p.unit }}</td><td class="num">{{ p.harvested_qty|qty }} {{ p.unit }}</td><td><span class="badge {% if p.status == 'failed' %}danger{% elif p.status == 'completed' %}grey{% endif %}">{{ p.get_status_display }}</span></td></tr>
+    {% empty %}<tr><td colspan="7" class="empty">No plantings yet.</td></tr>{% endfor %}</tbody></table></div>
+  </div>
+  <form method="post" class="card" novalidate data-cmap="cmap">{% csrf_token %}<h2>Record a planting</h2>{% if prefilled %}<p class="small notice">Filled in from the planting planner — check the figures, then save.</p>{% endif %}{% include "includes/form.html" %}<button class="btn block">Save planting</button></form>
+  {{ form.commodity_map|json_script:"cmap" }}
+</div>
+{% endblock %}

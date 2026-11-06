@@ -1,0 +1,37 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Settings{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Settings</h1><p>Business rules, categories and delivery rates. Changes are recorded in the audit log.</p></div><a class="btn secondary" href="/django-admin/">Database admin</a></div>
+<div class="grid grid-2">
+  <div class="stack">
+  <form method="post" class="card" novalidate>{% csrf_token %}<input type="hidden" name="form" value="settings"><h2>Business rules</h2>{% include "includes/form.html" %}<button class="btn">Save rules</button></form>
+  <form method="post" class="card" novalidate id="card-payments">{% csrf_token %}<input type="hidden" name="form" value="gateway"><h2>Card payments</h2>
+    <p class="small muted">Choose <strong>Paystack test mode</strong> and paste your <code>sk_test_</code> secret key to use Paystack's real payment page with no real money. Switch to <strong>live</strong> only with your own account. Paystack test card: <code>4084 0840 8408 4081</code>, CVV <code>408</code>, any future expiry.</p>
+    {% if key_from_file %}<p class="small notice">The Paystack key from <code>email_settings.bat</code> is being used. Click Save card payments to keep it here too.</p>{% endif %}
+    {% with form=gw_form %}{% include "includes/form.html" %}{% endwith %}
+    <button class="btn">Save card payments</button>
+    <button class="btn secondary" form="pftest">Test card gateway</button>
+    {% if form.instance.card_gateway|slice:":8" == "paystack" %}<button class="btn secondary" form="payoutacc">Set up farm payout accounts</button>
+    <p class="small muted">With Paystack, each verified farm gets a Paystack subaccount for its bank account. Card payments are then split: the farm's share goes straight into its bank, and AgriMarket keeps its commission and the delivery fee. Farms are set up automatically when verified or when they save their bank details; this button sets up all of them at once.</p>{% endif %}</form>
+  <form method="post" id="pftest">{% csrf_token %}<input type="hidden" name="form" value="pftest"></form>
+  <form method="post" id="payoutacc">{% csrf_token %}<input type="hidden" name="form" value="payout_accounts"></form>
+  </div>
+  <div class="stack">
+    <div class="card"><h2>Categories</h2>
+      <table class="data"><tbody>{% for c in categories %}<tr><td>{{ c.name }}</td><td><span class="badge {% if c.kind == 'livestock' %}wheat{% endif %}">{{ c.get_kind_display }}</span></td><td>{% if not c.is_active %}<span class="badge grey">Hidden</span>{% endif %}</td>
+        <td class="right"><form method="post" action="{% url 'core:category_toggle' c.pk %}">{% csrf_token %}<button class="btn small secondary">{% if c.is_active %}Hide{% else %}Show{% endif %}</button></form></td></tr>{% endfor %}</tbody></table><hr>
+      <form method="post" class="inline-fields" novalidate>{% csrf_token %}<input type="hidden" name="form" value="category">{{ cat_form.name }}{{ cat_form.kind }}<input type="hidden" name="c-is_active" value="on"><button class="btn small">Add category</button>{{ cat_form.name.errors }}</form></div>
+    <div class="card"><h2>Delivery rates</h2>
+      <table class="data"><thead><tr><th>Province</th><th class="num">Base fee</th><th class="num">Per ton</th></tr></thead><tbody>{% for r in rates %}<tr><td>{{ r }}</td><td class="num">{{ r.base_fee|rand }}</td><td class="num">{{ r.per_ton_fee|rand }}</td></tr>{% endfor %}</tbody></table><hr>
+      <form method="post" class="inline-fields" novalidate>{% csrf_token %}<input type="hidden" name="form" value="rate">{{ rate_form.province }}{{ rate_form.base_fee }}{{ rate_form.per_ton_fee }}<button class="btn small">Save rate</button></form>
+      <p class="small muted">Fee per farm sub-order = base fee + per-ton fee × estimated weight (crate ≈ 20 kg; livestock uses average weight).</p></div>
+  </div>
+</div>
+<div class="card" style="margin-top:16px"><h2>Standard product list</h2>
+  <p class="small muted">Farmers can only list these products, with these units and official grades. Grades follow the regulations under the Agricultural Product Standards Act (Act 119 of 1990). Hidden products disappear from the marketplace but keep their history.</p>
+  <div class="table-wrap"><table class="data small"><thead><tr><th>Code</th><th>Product</th><th>Category</th><th>Units</th><th>Official grades</th><th>Standard</th><th>Shelf life</th><th></th></tr></thead>
+  <tbody>{% for c in commodities %}<tr class="{% if not c.is_active %}muted{% endif %}"><td><code>{{ c.code }}</code></td><td><strong>{{ c.name }}</strong></td><td>{{ c.category.name }}</td><td>{{ c.units }}</td><td>{{ c.grade_list|join:", "|default:"—" }}</td><td>{{ c.standard_reference }}</td><td>{% if c.shelf_life_days %}{{ c.shelf_life_days }} days{% else %}—{% endif %}</td>
+  <td class="right"><form method="post" action="{% url 'core:commodity_toggle' c.pk %}">{% csrf_token %}<button class="btn small secondary">{% if c.is_active %}Hide{% else %}Show{% endif %}</button></form></td></tr>{% endfor %}</tbody></table></div>
+  <details><summary class="btn secondary small">+ Add a product</summary><br>
+  <form method="post" class="form-grid" novalidate>{% csrf_token %}<input type="hidden" name="form" value="commodity">{% with form=com_form %}{% include "includes/form.html" %}{% endwith %}<div class="full"><button class="btn">Add product</button></div></form></details>
+</div>
+{% endblock %}

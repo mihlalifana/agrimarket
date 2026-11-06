@@ -1,0 +1,31 @@
+{% load agri %}{# One farm's part of the order: seller, items, delivery, history #}
+<div class="grid grid-2" style="margin-bottom:12px">
+  <dl class="facts small">
+    <dt>Sold by</dt><dd><a href="{% url 'marketplace:farmer_page' s.farmer.pk %}"><strong>{{ s.farmer.farm.farm_name }}</strong></a><br>{{ s.farmer.get_full_name }} · {{ s.farmer.phone }}<br>{{ s.farmer.farm.town }}, {{ s.farmer.farm.get_province_display }}</dd>
+    <dt>VAT</dt><dd>{% if s.farmer_vat_number %}VAT no. {{ s.farmer_vat_number }}{% else %}Not VAT registered{% endif %}</dd>
+    {% if s.invoice_number %}<dt>Invoice</dt><dd><a href="{% url 'orders:invoice' s.pk %}" target="_blank">{{ s.invoice_number }}</a>{% if s.approved_at %} · issued {{ s.approved_at|date:"d M Y" }}{% endif %}</dd>{% endif %}
+  </dl>
+  <dl class="facts small">
+    {% if s.is_delivery %}
+      <dt>Distributor</dt><dd>{% if s.distributor %}{{ s.distributor.get_full_name }} · {{ s.distributor.phone }}{% else %}<span class="muted">not assigned yet</span>{% endif %}</dd>
+      <dt>Delivery date</dt><dd>{% if s.scheduled_date %}{{ s.scheduled_date|date:"D d M Y" }}, {{ s.time_slot }}{% else %}<span class="muted">not scheduled yet</span>{% endif %}</dd>
+    {% else %}<dt>Collection</dt><dd>From {{ s.farmer.farm.farm_name }}, {{ s.farmer.farm.town }}</dd>{% endif %}
+    {% if s.delivered_at %}<dt>{% if s.is_delivery %}Delivered{% else %}Collected{% endif %}</dt><dd>{{ s.delivered_at|date:"d M Y H:i" }}{% if s.delivery_note %}<br><span class="muted">{{ s.delivery_note }}</span>{% endif %}</dd>{% endif %}
+    {% if s.completed_at %}<dt>Completed</dt><dd>{{ s.completed_at|date:"d M Y" }}</dd>{% endif %}
+    {% if s.rejection_reason %}<dt>Reason</dt><dd>{{ s.rejection_reason }}</dd>{% endif %}
+  </dl>
+</div>
+<div class="table-wrap"><table class="data">
+  <thead><tr><th>Product</th><th>Grade</th><th>Batch</th><th class="num">Quantity</th><th class="num">Unit price</th><th class="num">VAT</th><th class="num">Amount</th></tr></thead>
+  <tbody>{% for it in s.items.all %}<tr><td>{{ it.product_name }}{% if it.product_code %}<div class="small muted">{{ it.product_code }}</div>{% endif %}</td>
+    <td>{{ it.grade|default:"—" }}</td><td><a href="{% url 'marketplace:listing' it.listing_id %}"><code>{{ it.batch_number }}</code></a></td>
+    <td class="num">{{ it.quantity|qty }} {{ it.unit }}</td><td class="num">{{ it.unit_price|rand }}</td><td class="num">{{ it.vat_rate|pct }}</td><td class="num">{{ it.line_total|rand }}</td></tr>{% endfor %}</tbody>
+  <tfoot>
+    <tr><td colspan="6">Goods (excl. VAT)</td><td class="num">{{ s.goods_subtotal|rand }}</td></tr>
+    <tr><td colspan="6">VAT</td><td class="num">{{ s.vat_amount|rand }}</td></tr>
+    <tr><td colspan="6">Delivery</td><td class="num">{{ s.delivery_fee|rand }}</td></tr>
+    <tr><td colspan="6">Total from this farm</td><td class="num">{{ s.total|rand }}</td></tr></tfoot>
+</table></div>
+<h3 style="margin-top:14px">History</h3>
+<ul class="timeline">{% for h in s.history.all %}<li><strong>{{ h.get_to_status_display }}</strong> <span class="muted small">{{ h.created_at|date:"d M Y H:i" }} · {% if h.changed_by %}{{ h.changed_by.get_full_name|default:h.changed_by.email }} ({{ h.changed_by.get_role_display|lower }}){% else %}system{% endif %}</span>{% if h.note %}<div class="small muted">{{ h.note }}</div>{% endif %}</li>{% endfor %}</ul>
+{% with refunds=s.refunds.all %}{% if refunds %}<h3>Refunds</h3><ul class="list-plain small">{% for r in refunds %}<li>{{ r.amount|rand }} · {{ r.reason }} · <span class="badge {% if r.status == 'processed' %}{% else %}wheat{% endif %}">{{ r.get_status_display }}</span>{% if r.processed_at %} {{ r.processed_at|date:"d M Y" }}{% endif %}</li>{% endfor %}</ul>{% endif %}{% endwith %}

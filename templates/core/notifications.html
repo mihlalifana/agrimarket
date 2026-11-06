@@ -1,0 +1,6 @@
+{% extends "base.html" %}{% block title %}Notifications{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Notifications</h1></div><form method="post" action="{% url 'core:notifications_read_all' %}">{% csrf_token %}<button class="btn secondary">Mark all as read</button></form></div>
+<div class="card"><ul class="list-plain">{% for n in page %}<li class="{% if not n.is_read %}unread{% endif %}"><a href="{% url 'core:notification_open' n.pk %}">{{ n.title }}</a> <span class="small muted">{{ n.created_at|date:"d M Y H:i" }}</span>{% if n.body %}<div class="small {% if n.is_read %}muted{% endif %}" style="font-weight:400">{{ n.body }}</div>{% endif %}</li>{% empty %}<li class="muted">No notifications.</li>{% endfor %}</ul></div>
+{% include "includes/pagination.html" %}
+{% endblock %}

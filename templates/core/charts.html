@@ -1,0 +1,74 @@
+{% load static %}<script src="{% static 'js/chart.umd.min.js' %}"></script>
+<script>
+(function () {
+  if (!window.Chart) return;  // offline: charts are skipped, tables still show the numbers
+  const el = document.getElementById('chart-data'); if (!el) return;
+  let d = JSON.parse(el.textContent);
+  if (typeof d === 'string') d = JSON.parse(d);
+  // Categorical order (validated for colour-blind separation): green, wheat, blue, brick, then grey for "Other".
+  const C = ['#2e7d4f', '#c48a1c', '#3a6ea5', '#b0503a', '#8a8f88'];
+  const green = C[0], wheat = C[1], brick = C[3], grey = '#8a8f88';
+  const num0 = v => { const n = Math.round(Number(v)); return (n < 0 ? '-' : '') + String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); };
+  const num2 = v => { const n = Number(v); const [i, d] = Math.abs(n).toFixed(2).split('.'); return (n < 0 ? '-' : '') + i.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + '.' + d; };
+  const rand = v => v == null ? '—' : 'R ' + num0(v);
+  const randc = v => v == null ? '—' : 'R ' + num2(v);
+  Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+  Chart.defaults.color = '#69716a';
+  const grid = {color: '#eee9dd'};
+  const charts = {};
+
+  function bar(id, labels, values, color, horizontal) {
+    const c = document.getElementById(id); if (!c) return;
+    charts[id] = new Chart(c, {type: 'bar', data: {labels, datasets: [{data: values, backgroundColor: color, borderRadius: 4, maxBarThickness: 38}]},
+      options: {indexAxis: horizontal ? 'y' : 'x', maintainAspectRatio: false, plugins: {legend: {display: false},
+        tooltip: {callbacks: {label: c => rand(c.parsed[horizontal ? 'x' : 'y'])}}},
+        scales: {x: {grid: horizontal ? grid : {display: false}, ticks: horizontal ? {callback: rand} : {}},
+                 y: {grid: horizontal ? {display: false} : grid, ticks: horizontal ? {} : {callback: rand}, beginAtZero: true}}}});
+  }
+
+  // Line chart: 2px lines, visible points, one shared tooltip for the hovered month/week.
+  function line(id, labels, series, opt) {
+    opt = opt || {};
+    const c = document.getElementById(id); if (!c) return;
+    const fmt = opt.count ? (v => v == null ? '—' : num0(v)) : (opt.cents ? randc : rand);
+    if (charts[id]) charts[id].destroy();
+    charts[id] = new Chart(c, {type: 'line',
+      data: {labels, datasets: series.map(s => ({label: s.label, data: s.data, borderColor: s.color, backgroundColor: s.fill ? s.color + '22' : s.color,
+        borderWidth: 2, borderDash: s.dash || [], pointRadius: 3, pointHoverRadius: 6, pointBackgroundColor: s.color,
+        pointBorderColor: '#fff', pointBorderWidth: 1, tension: 0, fill: s.fill ? 'origin' : false, spanGaps: !!s.span}))},
+      options: {maintainAspectRatio: false, interaction: {mode: 'index', intersect: false},
+        plugins: {legend: {display: series.length > 1, position: 'bottom', labels: {usePointStyle: true, boxWidth: 8, boxHeight: 8}},
+          tooltip: {callbacks: {label: t => ' ' + t.dataset.label + ': ' + fmt(t.parsed.y)}}},
+        scales: {x: {grid: {display: false}}, y: {grid, beginAtZero: !opt.free, ticks: {callback: fmt, precision: opt.count ? 0 : undefined}}}}});
+  }
+
+  if (d.monthly) {
+    if (d.line) line('monthly', d.months, [{label: 'Sales', data: d.monthly, color: green, fill: true}]);
+    else bar('monthly', d.months, d.monthly, green, false);
+  }
+  if (d.cat_labels) bar('cats', d.cat_labels, d.cat_values, green, true);
+  if (d.prov_labels) bar('provs', d.prov_labels, d.prov_values, wheat, true);
+
+  const t = d.trends;
+  if (t) {
+    line('inout', t.months, [{label: 'Money in (sales)', data: t.sales, color: green},
+                             {label: 'Money out (costs)', data: t.costs, color: brick, dash: [6, 4]}]);
+    line('running', t.months, [{label: 'Profit so far', data: t.running, color: t.running.length && t.running[t.running.length - 1] < 0 ? brick : green, fill: true}], {free: true});
+    line('weekly', t.weeks, [{label: 'Sales', data: t.weekly, color: green, fill: true}]);
+    if (t.products && t.products.length) line('byproduct', t.months, t.products.map((p, i) => ({label: p.name, data: p.values, color: C[Math.min(i, C.length - 1)]})));
+    line('activity', t.months, [{label: 'Orders', data: t.orders, color: green}, {label: 'Different buyers', data: t.buyers, color: wheat, dash: [6, 4]}], {count: true});
+    const sel = document.getElementById('price-product');
+    const drawPrice = i => {
+      const p = t.prices[i]; if (!p) return;
+      line('prices', t.months, [{label: 'My average price', data: p.mine, color: green, span: true},
+                                {label: 'Market average', data: p.market, color: grey, dash: [6, 4], span: true}], {cents: true, free: true});
+    };
+    if (sel && t.prices.length) { sel.addEventListener('change', () => drawPrice(+sel.value)); drawPrice(0); }
+  }
+  const pt = d.platform;
+  if (pt) {
+    line('p-sales', pt.months, [{label: 'Sales', data: pt.sales, color: green, fill: true}]);
+    line('p-orders', pt.months, [{label: 'Orders', data: pt.orders, color: green}, {label: 'Farms selling', data: pt.farms, color: wheat, dash: [6, 4]}], {count: true});
+  }
+})();
+</script>

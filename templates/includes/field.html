@@ -1,0 +1,12 @@
+{% if field.is_hidden %}{{ field }}{% elif field.widget_type == 'checkbox' %}
+<div class="field field-check{% if field.errors %} has-error{% endif %}">{{ field }} <div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}{{ field.errors }}</div></div>
+{% elif field.widget_type == 'radioselect' %}
+<div class="field{% if field.errors %} has-error{% endif %}"><label>{{ field.label }}</label>
+<ul class="radio-list">{% for r in field %}<li><label>{{ r.tag }} {{ r.choice_label }}</label></li>{% endfor %}</ul>{{ field.errors }}</div>
+{% else %}
+<div class="field{% if field.errors %} has-error{% endif %}">
+  <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="muted">*</span>{% endif %}</label>
+  {{ field }}
+  {% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}
+  {{ field.errors }}
+</div>{% endif %}

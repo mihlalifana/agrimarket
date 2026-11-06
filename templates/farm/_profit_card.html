@@ -1,0 +1,23 @@
+{% load agri %}{# One crop or herd explained in plain words. Needs: e (from farm/economics.py), link (bool) #}
+<div class="profit-card">
+  <div class="row between">
+    <div>{% if link %}<a href="{% if e.unit == 'head' %}{% url 'farm:herd' e.obj.pk %}{% else %}{% url 'farm:planting' e.obj.pk %}{% endif %}"><strong>{{ e.label }}</strong></a>{% else %}<strong>{{ e.label }}</strong>{% endif %}
+      <span class="small muted">· {{ e.commodity }} · {{ e.season }}</span></div>
+    <span class="badge {% if e.tone == 'ok' %}{% elif e.tone == 'danger' %}danger{% elif e.tone == 'wheat' %}wheat{% else %}grey{% endif %}">{{ e.status }}</span>
+  </div>
+  <div class="money-row">
+    <div><div class="label">You spent</div><div class="amt">{{ e.cost|rand }}</div></div>
+    <div><div class="label">You earned so far</div><div class="amt">{{ e.revenue|rand }}</div></div>
+    <div><div class="label">Profit so far</div><div class="amt {% if e.profit < 0 %}neg{% else %}pos{% endif %}">{{ e.profit|rand }}</div></div>
+  </div>
+  <div class="bars" aria-hidden="true">
+    <div class="bar"><span class="bar-label">Spent</span><span class="bar-track"><span class="fill cost" style="width:{{ e.bar_cost }}%"></span></span></div>
+    <div class="bar"><span class="bar-label">Earned</span><span class="bar-track"><span class="fill income" style="width:{{ e.bar_income }}%"></span><span class="fill rest" style="width:{{ e.bar_rest }}%"></span></span></div>
+  </div>
+  <ul class="explain">
+    {% if e.produced %}<li>You {% if e.unit == 'head' %}had{% else %}harvested{% endif %} <strong>{{ e.produced|qty }} {{ e.unit }}</strong> and have sold <strong>{{ e.sold|qty }} {{ e.unit }}</strong> ({{ e.pct_sold }}%).</li>{% endif %}
+    {% if e.cost_per_unit %}<li>Each {{ e.unit }} cost you <strong>{{ e.cost_per_unit|rand }}</strong> to produce{% if e.avg_price %}, and you sold at <strong>{{ e.avg_price|rand }}</strong> on average — {% if e.margin_per_unit >= 0 %}you make <strong>{{ e.margin_per_unit|rand }}</strong> on every {{ e.unit }} sold{% else %}you <strong>lose {{ e.margin_per_unit|rand|cut:"-" }}</strong> on every {{ e.unit }} sold{% endif %}{% endif %}.</li>{% elif e.cost %}<li>Record the harvest to see what each {{ e.unit }} cost you.</li>{% endif %}
+    {% if e.market_avg and e.avg_price %}<li>Other farms got <strong>{{ e.market_avg|rand }}</strong> per {{ e.unit }} on average over the last 90 days.</li>{% endif %}
+    {% if e.in_stock > 0 and e.rest_value %}<li>You still have <strong>{{ e.in_stock|qty }} {{ e.unit }}</strong>, worth about <strong>{{ e.rest_value|rand }}</strong> at {{ e.price_for_rest|rand }} per {{ e.unit }}. If it all sells, your profit will be about <strong class="{% if e.expected_profit < 0 %}neg{% else %}pos{% endif %}">{{ e.expected_profit|rand }}</strong>.</li>{% endif %}
+  </ul>
+</div>

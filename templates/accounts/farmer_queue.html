@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% block title %}Farmer verification{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Farmer verification</h1><p>Farmers can list stock only after approval. Check the details and decide on each row.</p></div></div>
+<div class="tabs">{% for v, l in statuses %}<a href="?status={{ v }}" class="{% if v == status %}on{% endif %}">{{ l }}</a>{% endfor %}</div>
+<div class="stack">{% for f in farms %}
+<div class="card">
+  <div class="row between"><h2 style="margin:0">{{ f.farm_name }}</h2><span class="badge s-{{ f.status }}">{{ f.get_status_display }}</span></div>
+  <div class="split" style="margin-top:10px">
+    <dl class="facts small">
+      <dt>Farmer</dt><dd>{{ f.user.get_full_name }} · {{ f.user.phone }} · {{ f.user.email }}</dd>
+      <dt>Location</dt><dd>{{ f.town }}, {{ f.get_province_display }}</dd>
+      <dt>Brand mark</dt><dd>{{ f.brand_mark|default:"Not given (cannot sell livestock)" }}</dd>
+      <dt>VAT</dt><dd>{% if f.is_vat_registered %}Registered, {{ f.vat_number }}{% else %}Not registered{% endif %}</dd>
+      {% if gateway == "paystack" %}<dt>Card payout</dt><dd>{% if f.paid_direct %}Paystack account ready ({{ f.bank_name }}){% elif f.bank_code %}{{ f.bank_name }} ····{{ f.bank_account|slice:"-4:" }}{% if f.payout_account_note %}<br><span class="small muted">{{ f.payout_account_note }}</span>{% endif %}{% else %}No bank account yet{% endif %}</dd>{% endif %}
+      <dt>Registered</dt><dd>{{ f.user.date_joined|date:"d M Y H:i" }} · POPIA consent {{ f.user.popia_consent_at|date:"d M Y"|default:"—" }}</dd>
+      {% if f.reviewed_at %}<dt>Last decision</dt><dd>{{ f.reviewed_at|date:"d M Y" }} by {{ f.reviewed_by.get_full_name }}{% if f.rejection_reason %} — {{ f.rejection_reason }}{% endif %}</dd>{% endif %}
+    </dl>
+    <form method="post" action="{% url 'accounts:farmer_review' f.pk %}" novalidate>{% csrf_token %}{% with form=f.review_form %}{% include "includes/form.html" %}{% endwith %}<button class="btn block">Save decision</button></form>
+  </div>
+</div>
+{% empty %}<div class="card empty">Nothing here.</div>{% endfor %}</div>
+{% endblock %}

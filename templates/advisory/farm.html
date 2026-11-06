@@ -1,0 +1,54 @@
+{% extends "base.html" %}{% load agri %}{% block title %}{{ farm.farm_name }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ farm.farm_name }}</h1><p>{{ farmer.get_full_name }} · {{ farmer.phone }} · {{ farm.town }}, {{ farm.get_province_display }}</p></div>
+  {% if link %}<form method="post" action="{% url 'advisory:link_end' link.pk %}" onsubmit="return confirm('Stop advising this farm?')">{% csrf_token %}<button class="btn secondary small">Stop advising</button></form>{% endif %}</div>
+<p class="small muted">You see this farm's fields, crops, harvests and crop costs because the farmer added you. Sales, buyers and bank details are private.</p>
+
+<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px">
+  <a class="btn" href="#visit">+ Field visit</a><a class="btn secondary" href="#advice">+ Recommendation</a>
+  <a class="btn secondary" href="#soil">+ Soil test</a><a class="btn secondary" href="#spray">+ Spray programme</a>
+</div>
+
+<div class="card"><h2>Crops now</h2><div class="table-wrap"><table class="data"><thead><tr><th>Crop</th><th>Field</th><th>Planted</th><th class="num">Expected / ha</th><th class="num">Harvested / ha</th><th class="num">Cost / ha so far</th><th>Last visit</th><th>Sprays</th></tr></thead>
+<tbody>{% for c in current %}<tr>
+  <td><strong>{{ c.p.commodity }}</strong>{% if c.p.cultivar %}<div class="small muted">{{ c.p.cultivar }}</div>{% endif %}<div><span class="badge s-{{ c.p.status }}">{{ c.p.get_status_display }}</span></div></td>
+  <td>{{ c.p.field.name }}<div class="small muted">{{ c.p.area_ha|qty }} ha</div></td>
+  <td>{{ c.p.planted_on|date:"d M" }}<div class="small muted">harvest ~{{ c.p.expected_harvest|date:"d M" }}</div></td>
+  <td class="num">{% if c.expected_ha %}{{ c.expected_ha|qty }} {{ c.p.unit }}{% else %}—{% endif %}</td>
+  <td class="num">{% if c.yield_ha %}{{ c.yield_ha|qty }} {{ c.p.unit }}{% if c.pct_of_expected %}<div class="small muted">{{ c.pct_of_expected }}% of plan so far</div>{% endif %}{% else %}—{% endif %}</td>
+  <td class="num">{% if c.cost_ha %}{{ c.cost_ha|rand }}{% else %}—{% endif %}</td>
+  <td>{% if c.last_visit %}{{ c.last_visit.visited_on|date:"d M" }}{% else %}<span class="badge wheat">Not visited</span>{% endif %}</td>
+  <td>{% for s in c.in_phi %}<span class="badge wheat" title="{{ s.product }}">No harvest before {{ s.safe_from|date:"d M" }}</span>{% empty %}<span class="small muted">—</span>{% endfor %}</td></tr>
+{% empty %}<tr><td colspan="8" class="empty">No crops in the ground.</td></tr>{% endfor %}</tbody></table></div></div>
+
+<div class="card"><h2>Fields and soil</h2><div class="table-wrap"><table class="data"><thead><tr><th>Field</th><th class="num">Size</th><th>Soil</th><th>Irrigated</th><th>Latest soil test</th></tr></thead>
+<tbody>{% for f in fields %}<tr><td>{{ f.name }}</td><td class="num">{{ f.size_ha|qty }} ha</td><td>{{ f.soil_type|default:"—" }}</td><td>{% if f.irrigated %}Yes{% else %}Dryland{% endif %}</td>
+<td>{% if f.latest_soil %}{{ f.latest_soil.sampled_on|date:"d M Y" }} · pH {{ f.latest_soil.ph_kcl }} · P {{ f.latest_soil.p_mg_kg|floatformat:0 }} · K {{ f.latest_soil.k_mg_kg|floatformat:0 }} mg/kg<div class="small muted">{{ f.latest_soil.ph_note }} {{ f.latest_soil.p_note }}.</div>{% else %}<span class="badge wheat">No test yet</span>{% endif %}</td></tr>
+{% endfor %}</tbody></table></div></div>
+
+{% if past %}<div class="card"><h2>Past crops — yield and cost per hectare</h2><div class="table-wrap"><table class="data"><thead><tr><th>Crop</th><th>Field</th><th>Planted</th><th class="num">Planned / ha</th><th class="num">Achieved / ha</th><th class="num">Cost / ha</th></tr></thead>
+<tbody>{% for c in past %}<tr><td>{{ c.p.commodity }}</td><td>{{ c.p.field.name }}</td><td>{{ c.p.planted_on|date:"d M Y" }}</td><td class="num">{{ c.expected_ha|qty }} {{ c.p.unit }}</td>
+<td class="num">{% if c.yield_ha %}{{ c.yield_ha|qty }} {{ c.p.unit }} {% if c.pct_of_expected %}<span class="small {% if c.pct_of_expected < 80 %}badge danger{% else %}muted{% endif %}">{{ c.pct_of_expected }}%</span>{% endif %}{% else %}—{% endif %}</td><td class="num">{% if c.cost_ha %}{{ c.cost_ha|rand }}{% else %}—{% endif %}</td></tr>{% endfor %}</tbody></table></div></div>{% endif %}
+
+<div class="grid grid-2">
+  <div class="card"><h2>Visits</h2><ul class="list-plain">{% for v in visits %}<li><strong>{{ v.visited_on|date:"d M Y" }}</strong> · {{ v.field.name }}{% if v.planting %} · {{ v.planting.commodity }}{% endif %}{% if v.growth_stage %} · {{ v.growth_stage }}{% endif %}
+    <div class="small">{% if v.problem != "none" %}<span class="badge {% if v.severity == 'high' %}danger{% else %}wheat{% endif %}">{{ v.get_problem_display }}{% if v.problem_detail %}: {{ v.problem_detail }}{% endif %}</span> {% endif %}{{ v.observations }}</div>
+    <div class="small muted">{{ v.agronomist.get_full_name }}</div></li>{% empty %}<li class="muted">No visits yet.</li>{% endfor %}</ul></div>
+  <div class="card"><h2>Advice given</h2><ul class="list-plain">{% for r in recs %}<li><span class="badge {% if r.status == 'done' %}{% elif r.status == 'declined' %}grey{% elif r.overdue %}danger{% else %}wheat{% endif %}">{{ r.get_status_display }}</span> <strong>{{ r.get_kind_display }}</strong>{% if r.field %} · {{ r.field.name }}{% endif %}{% if r.do_by %} <span class="small muted">by {{ r.do_by|date:"d M" }}</span>{% endif %}
+    <div class="small">{{ r.advice }}</div>{% if r.farmer_note %}<div class="small muted">Farmer: {{ r.farmer_note }}</div>{% endif %}</li>{% empty %}<li class="muted">No recommendations yet.</li>{% endfor %}</ul></div>
+</div>
+
+<div class="card"><h2>Spray records</h2><div class="table-wrap"><table class="data small"><thead><tr><th>Date</th><th>Crop</th><th>Product</th><th>Reg. no</th><th>Target</th><th>Rate</th><th>Harvest allowed from</th></tr></thead>
+<tbody>{% for s in sprays %}<tr><td>{{ s.applied_on|date:"d M Y" }}</td><td>{{ s.planting.commodity }} · {{ s.planting.field.name }}</td><td>{{ s.product }}<div class="muted">{{ s.active_ingredient }}</div></td><td>{{ s.registration_no }}</td><td>{{ s.target }}</td><td>{{ s.rate }}</td>
+<td>{% if s.in_phi %}<span class="badge wheat">{{ s.safe_from|date:"d M Y" }}</span>{% else %}{{ s.safe_from|date:"d M Y" }}{% endif %}</td></tr>{% empty %}<tr><td colspan="7" class="empty">No sprays recorded.</td></tr>{% endfor %}</tbody></table></div></div>
+
+<details class="panel" id="visit"><summary>Log a field visit</summary>
+  <form method="post" action="{% url 'advisory:visit_add' farmer.pk %}" enctype="multipart/form-data" novalidate>{% csrf_token %}{% with form=visit_form %}{% include "includes/form.html" %}{% endwith %}<button class="btn">Save visit</button></form></details>
+<details class="panel" id="advice"><summary>Write a recommendation</summary>
+  <form method="post" action="{% url 'advisory:rec_add' farmer.pk %}" novalidate>{% csrf_token %}{% with form=rec_form %}{% include "includes/form.html" %}{% endwith %}<button class="btn">Send to farmer</button></form></details>
+<details class="panel" id="soil"><summary>Add soil test results</summary>
+  <form method="post" action="{% url 'advisory:soil_add_for' farmer.pk %}" novalidate>{% csrf_token %}{% with form=soil_form %}{% include "includes/form.html" %}{% endwith %}<button class="btn">Save soil test</button></form></details>
+<details class="panel" id="spray"><summary>Record a spray programme</summary>
+  <p class="small muted">Use only products registered under Act 36 of 1947 for this crop. The pre-harvest interval on the label blocks harvesting until it has passed.</p>
+  <form method="post" action="{% url 'advisory:spray_add_for' farmer.pk %}" novalidate>{% csrf_token %}{% include "advisory/_spray_fields.html" with form=spray_form %}<button class="btn">Save spray</button></form></details>
+{% endblock %}

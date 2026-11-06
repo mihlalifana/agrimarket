@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Income{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>AgriMarket income</h1><p>Totals only. AgriMarket earns {{ commission_pct }}% commission on goods and the delivery fee on completed orders; Paystack keeps them in AgriMarket's account and pays each farm its share directly.</p></div></div>
+<div class="card table-wrap"><table class="data"><thead><tr><th>Month</th><th class="num">Orders completed</th><th class="num">Commission</th><th class="num">Commission given back on refunds</th><th class="num">Delivery fees</th><th class="num">Income</th><th class="num">All refunds sent</th></tr></thead>
+<tbody>{% for m in months %}<tr><td>{{ m.period|date:"F Y" }}</td><td class="num">{{ m.orders }}</td><td class="num">{{ m.commission|rand }}</td><td class="num">{{ m.commission_back|rand }}</td><td class="num">{{ m.delivery|rand }}</td><td class="num"><strong>{{ m.income|rand }}</strong></td><td class="num">{{ m.refunds|rand }}</td></tr>{% endfor %}</tbody></table></div>
+<div class="card"><h2>Refunds Paystack could not send</h2>
+<p class="small muted">The hourly job tries again automatically. If Paystack keeps refusing (for example, AgriMarket's Paystack balance is too low), fix the cause and press Retry.</p>
+<div class="table-wrap"><table class="data"><thead><tr><th>Order</th><th>Farm</th><th class="num">Amount</th><th>Paystack's reason</th><th></th></tr></thead>
+<tbody>{% for r in stuck %}<tr><td>{{ r.suborder.order.number }}</td><td>{{ r.suborder.farmer.farm.farm_name }}</td><td class="num">{{ r.amount|rand }}</td><td class="small">{{ r.problem }}</td>
+<td><form method="post" action="{% url 'finance:retry_refund' r.pk %}">{% csrf_token %}<button class="btn small">Retry</button></form></td></tr>
+{% empty %}<tr><td colspan="5" class="empty">None. Every refund has been sent.</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

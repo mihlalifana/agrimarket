@@ -1,0 +1,87 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Cart and checkout{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Cart and checkout</h1><p>Items are grouped by farm; each farm packs and invoices its own part. Pay by card. Your order is confirmed as soon as the payment goes through{% if gateway %}, on {{ gateway_name }}'s secure page{% endif %}, and each farm is paid its share directly.</p></div></div>
+{% if quote.groups %}
+<div class="split">
+  <div class="stack">
+  {% for g in quote.groups %}
+    <div class="card">
+      <div class="row between"><h3 style="margin:0">{{ g.farmer.farm.farm_name }}</h3><span class="small muted">{{ g.farmer.farm.town }}, {{ g.farmer.farm.get_province_display }}{% if not g.vat %} · no VAT{% endif %}</span></div>
+      <div class="table-wrap"><table class="data">
+        <thead><tr><th>Item</th><th>Quantity</th><th class="num hide-sm">Unit price</th><th class="num">Amount</th><th></th></tr></thead>
+        <tbody>{% for line in g.lines %}{% with i=line.item %}<tr>
+          <td><a href="{% url 'marketplace:listing' i.listing.pk %}">{{ i.listing.name }}</a><div class="small muted">{% if i.listing.grade %}{{ i.listing.grade }} · {% endif %}{{ i.listing.qty_display }} available</div></td>
+          <td><form method="post" action="{% url 'marketplace:cart_update' i.pk %}" class="inline-fields">{% csrf_token %}
+            <input class="input qty-input" type="number" name="quantity" value="{{ i.quantity|qty }}" min="{{ i.listing.min_order_qty|qty }}" step="{% if i.listing.is_livestock %}1{% else %}0.001{% endif %}" aria-label="Quantity"> <span class="small">{{ i.listing.unit }}</span>
+            <button class="btn secondary small">Update</button></form></td>
+          <td class="num hide-sm">{{ line.unit_price|rand }}</td><td class="num">{{ line.line_total|rand }}<div class="small muted">{{ line.unit_price|rand }}/{{ i.listing.unit }}</div></td>
+          <td><form method="post" action="{% url 'marketplace:cart_update' i.pk %}">{% csrf_token %}<button class="btn danger small" name="remove" value="1" aria-label="Remove {{ i.listing.name }}">✕</button></form></td>
+        </tr>{% endwith %}{% endfor %}</tbody>
+        <tfoot><tr><td colspan="2">Subtotal{% if g.vat %} + VAT {{ g.vat_rate|pct }}{% endif %}</td><td class="num hide-sm"></td><td class="num">{{ g.goods|add:g.vat|rand }}</td><td></td></tr></tfoot>
+      </table></div>
+    </div>
+  {% endfor %}
+  <p class="small"><a href="{% url 'marketplace:catalog' %}">← Continue shopping</a></p>
+  </div>
+
+  <form method="post" action="{% url 'orders:checkout' %}" novalidate class="card" id="checkout">{% csrf_token %}
+    <h2>Place order</h2>
+    {% if form.non_field_errors %}<div class="nonfield">{{ form.non_field_errors }}</div>{% endif %}
+    {% with field=form.order_date %}{% include "includes/field.html" %}{% endwith %}
+    {% with field=form.delivery_method %}{% include "includes/field.html" %}{% endwith %}
+    <div id="addr">{% with field=form.delivery_address %}{% include "includes/field.html" %}{% endwith %}
+      {% with field=form.delivery_province %}{% include "includes/field.html" %}{% endwith %}</div>
+    {% with field=form.payment_method %}{% include "includes/field.html" %}{% endwith %}
+    <div id="cardbox" class="form-grid">
+      <div class="full">{% with field=form.card_number %}{% include "includes/field.html" %}{% endwith %}</div>
+      {% with field=form.card_expiry %}{% include "includes/field.html" %}{% endwith %}
+      {% with field=form.card_cvv %}{% include "includes/field.html" %}{% endwith %}
+    </div>
+    {% if gateway %}<p class="small notice" id="pfnote">You'll pay on <strong>{{ gateway_name }}'s</strong> secure page after placing the order — card details are never typed into AgriMarket.</p>{% endif %}
+    <hr>
+    <table class="data"><tbody>
+      <tr><td>Goods</td><td class="num">{{ quote.goods|rand }}</td></tr>
+      <tr><td>VAT</td><td class="num">{{ quote.vat|rand }}</td></tr>
+      <tr><td>Delivery</td><td class="num" id="fee">—</td></tr>
+    </tbody><tfoot><tr><td>Total</td><td class="num" id="total">{{ quote.total|rand }}</td></tr></tfoot></table>
+    <p class="small muted" id="feenote"></p>
+    <button class="btn block" name="place" value="1">Place order</button>
+  </form>
+</div>
+<script id="fees" type="application/json">{{ fees_json|safe }}</script>
+{% else %}<div class="card empty">Your cart is empty. <a href="{% url 'marketplace:catalog' %}">Browse the marketplace</a>.</div>{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  const f = document.getElementById('checkout'); if (!f) return;
+  const fees = JSON.parse(document.getElementById('fees').textContent);
+  const base = Number('{{ goods_vat }}');
+  const num2 = v => { const n = Number(v); const [i, d] = Math.abs(n).toFixed(2).split('.'); return (n < 0 ? '-' : '') + i.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + '.' + d; };
+  const rand = v => 'R ' + num2(v);
+  function sync() {
+    const del = f.querySelector('input[name=delivery_method]:checked');
+    const pay = f.querySelector('input[name=payment_method]:checked');
+    const isDel = !del || del.value !== 'collection';
+    document.getElementById('addr').style.display = isDel ? '' : 'none';
+    const gateway = {{ gateway|yesno:"true,false" }};
+    const od = f.querySelector('[name=order_date]');
+    const past = od && od.value && od.value < '{% now "Y-m-d" %}';
+    const isCard = pay && pay.value === 'card';
+    document.getElementById('cardbox').style.display = isCard && (!gateway || past) ? '' : 'none';
+    const pf = document.getElementById('pfnote'); if (pf) pf.style.display = isCard && !past ? '' : 'none';
+    const prov = f.querySelector('[name=delivery_province]').value;
+    let fee = 0, note = '';
+    if (isDel) {
+      if (!prov) { note = 'Choose a province to see the delivery fee.'; }
+      else if (fees[prov] === null || fees[prov] === undefined) { note = 'No delivery to this province yet — choose farm collection.'; }
+      else { fee = Number(fees[prov]); note = 'Delivery fee per farm: base fee + rate per ton.'; }
+    } else { note = 'You collect from each farm.'; }
+    document.getElementById('fee').textContent = isDel && prov && fees[prov] != null ? rand(fee) : (isDel ? '—' : rand(0));
+    document.getElementById('total').textContent = rand(base + fee);
+    document.getElementById('feenote').textContent = note;
+  }
+  f.addEventListener('change', sync); sync();
+})();
+</script>
+{% endblock %}

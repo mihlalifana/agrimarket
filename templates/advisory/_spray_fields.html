@@ -1,0 +1,4 @@
+{% include "includes/form.html" %}
+<p class="small notice remedy-label" hidden></p>
+<p class="small muted">Product missing? <a href="{% url 'advisory:remedy_request' %}">Send it for verification</a>. Registration number and waiting period always come from the verified label, never typed in.</p>
+<script type="application/json" class="remedy-map">{{ form.remedy_map_json|safe }}</script>

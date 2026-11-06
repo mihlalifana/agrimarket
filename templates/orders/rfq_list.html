@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% load agri %}{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ title }}</h1>
+  <p>{% if user.is_buyer %}Ask several farms to price a large or specific order, then choose the best offer. Nothing is ordered until you accept a quote.{% else %}Buyers looking for products you grow or raise. Open a request to send your price.{% endif %}</p></div></div>
+{% if user.is_buyer %}
+<details class="panel" id="new-request" {% if open_form %}open{% endif %}>
+  <summary>+ New quote request</summary>
+  <div class="panel-body">
+    <form method="post" action="{% url 'orders:rfq_create' %}" novalidate class="form-grid" data-cmap="cmap" data-grade-any="Any grade" data-guide-url="{% url 'insights:price_guide' %}">{% csrf_token %}
+      {% include "includes/form.html" %}
+      <div class="full"><p class="small muted std-ref"></p><button class="btn">Send to farms</button></div>
+    </form>
+    {{ form.commodity_map|json_script:"cmap" }}
+  </div>
+</details>
+{% endif %}
+<div class="card table-wrap"><table class="data"><thead><tr><th>Request</th><th>Product</th><th class="num">Quantity</th><th>Needed by</th><th>Deliver to</th><th class="num">Quotes</th><th>Status</th><th></th></tr></thead>
+<tbody>{% for r in rows %}<tr data-id="{{ r.pk }}"><td><strong>{{ r.number }}</strong><div class="small muted">{{ r.created_at|date:"d M Y" }}{% if not user.is_buyer %} · {{ r.buyer.get_buyer_type_display|default:"Buyer" }}{% endif %}</div></td><td>{{ r.commodity }}{% if r.grade %} · {{ r.grade }}{% endif %}</td><td class="num">{{ r.quantity|qty }} {{ r.unit }}</td><td>{{ r.needed_by|date:"d M Y" }}</td><td>{{ r.get_delivery_province_display }}</td><td class="num">{{ r.n_quotes }}</td>
+<td><span class="badge {% if r.status == 'open' %}wheat{% elif r.status == 'accepted' %}{% else %}grey{% endif %}">{{ r.get_status_display }}</span></td>
+<td class="right"><a class="btn secondary small" href="{% url 'orders:rfq_detail' r.pk %}">{% if user.is_farmer and r.status == 'open' %}Quote{% else %}Open{% endif %}</a></td></tr>
+{% empty %}<tr><td colspan="8" class="empty">{% if user.is_farmer %}No open requests for your products right now.{% else %}No quote requests yet.{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

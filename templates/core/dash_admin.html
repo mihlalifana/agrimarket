@@ -1,0 +1,23 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Admin dashboard{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Accounts</h1><p>{{ today|date:"l, d F Y" }} · registrations, verification and access</p></div>
+  <div class="row"><a class="btn secondary" href="{% url 'core:settings' %}">Platform settings</a><a class="btn secondary" href="{% url 'core:message_log' %}">SMS / email log</a></div></div>
+<div class="grid grid-4">
+  <div class="card stat {% if pending_farmers %}alert{% endif %}"><div class="label">Farms to verify</div><div class="value">{{ pending_farmers }}</div><div class="sub"><a href="{% url 'accounts:farmer_queue' %}">Open farmer queue</a></div></div>
+  <div class="card stat {% if pending_agronomists %}alert{% endif %}"><div class="label">Agronomists to verify</div><div class="value">{{ pending_agronomists }}</div><div class="sub"><a href="{% url 'advisory:agronomist_queue' %}">Open agronomist queue</a></div></div>
+  <div class="card stat {% if remedies_pending or not remedies_verified %}<div class="notice">{% if remedies_pending %}{{ remedies_pending }} spray product{{ remedies_pending|pluralize }} {{ remedies_pending|pluralize:"is,are" }} waiting for verification. {% endif %}{% if not remedies_verified %}There are <strong>no verified spray products</strong>, so nobody can record a spray. {% endif %}Open <a href="{% url 'advisory:remedies' %}?status=pending">Remedies</a>, check each product against its label and click Verify.</div><br>{% endif %}
+{% if locked %}alert{% endif %}"><div class="label">Locked accounts</div><div class="value">{{ locked|length }}</div><div class="sub">too many wrong passwords</div></div>
+  <div class="card stat"><div class="label">New accounts this month</div><div class="value">{{ new_this_month }}</div><div class="sub"><a href="{% url 'accounts:user_list' %}">All users</a></div></div>
+</div><br>
+{% if no_paystack_key or farms_no_payout %}<div class="notice">{% if no_paystack_key %}Card payments are set to Paystack, but no Paystack secret key is saved, so no farm can be paid and <strong>buyers see no stock</strong>. Add the key, or choose the simulated test card, in <a href="{% url 'core:settings' %}">Platform settings</a>.{% else %}{{ farms_no_payout }} verified farm{{ farms_no_payout|pluralize }} {{ farms_no_payout|pluralize:"has,have" }} no Paystack payout account yet, so buyers cannot see {{ farms_no_payout|pluralize:"its,their" }} stock. Use "Set up farm payout accounts" in <a href="{% url 'core:settings' %}#card-payments">Platform settings</a>, or ask the farmer to add a bank account on My profile.{% endif %}</div><br>{% endif %}
+{% if locked %}<div class="card"><h2>Locked accounts</h2><ul class="list-plain">{% for u in locked %}<li><a href="{% url 'accounts:user_list' %}?q={{ u.email|urlencode }}"><strong>{{ u.get_full_name|default:u.email }}</strong></a> · {{ u.get_role_display }} · locked until {{ u.locked_until|date:"H:i" }} <form method="post" action="{% url 'accounts:unlock' u.pk %}" class="inline-form">{% csrf_token %}<button class="btn small secondary">Unlock</button></form></li>{% endfor %}</ul></div><br>{% endif %}
+<div class="grid grid-2">
+  <div class="card"><h2>Accounts by role</h2><table class="data"><thead><tr><th>Role</th><th class="num">Active</th><th class="num">Deactivated</th></tr></thead>
+    <tbody>{% for name, active, inactive in by_role %}<tr><td>{{ name }}</td><td class="num">{{ active }}</td><td class="num">{{ inactive }}</td></tr>{% endfor %}</tbody></table></div>
+  <div class="card"><h2>Newest accounts</h2><table class="data"><thead><tr><th>Name</th><th>Role</th><th>Joined</th></tr></thead>
+    <tbody>{% for u in recent_users %}<tr><td>{{ u.get_full_name|default:u.email }}<div class="small muted">{{ u.email }}</div></td><td>{{ u.get_role_display }}{% if not u.is_active %} <span class="badge grey">Deactivated</span>{% endif %}</td><td class="small">{{ u.date_joined|date:"d M Y" }}</td></tr>{% endfor %}</tbody></table></div>
+</div><br>
+<div class="card"><h2>Latest account and setting changes</h2><table class="data small"><thead><tr><th>When</th><th>Who</th><th>What</th></tr></thead>
+  <tbody>{% for a in recent_audit %}<tr><td>{{ a.created_at|date:"d M H:i" }}</td><td>{{ a.user.get_full_name|default:"System" }}</td><td>{{ a.get_action_display }} · {{ a.object_type }} {{ a.object_repr|truncatechars:60 }}{% if a.field %} · {{ a.field }}{% endif %}</td></tr>{% empty %}<tr><td colspan="3" class="empty">Nothing yet.</td></tr>{% endfor %}</tbody></table>
+  <p class="small"><a href="{% url 'core:audit_log' %}">Full audit log</a></p></div>
+{% endblock %}

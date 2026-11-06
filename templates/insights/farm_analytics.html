@@ -1,0 +1,62 @@
+{% extends "base.html" %}{% load agri %}{% block title %}My analytics{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>My farm analytics</h1><p>How your farm is doing: sales, profit per crop and herd, and how your prices compare with the market.</p></div>
+  <div class="row no-print"><a class="btn secondary" href="{% url 'finance:reports' %}">Detailed reports</a><button class="btn secondary" onclick="window.print()">Print</button></div></div>
+<div class="grid grid-4">
+  <div class="card stat"><div class="label">Sales this month</div><div class="value">{{ kpi.this_month|rand }}</div>
+    <div class="sub">{% if kpi.vs_last is not None %}{% if kpi.vs_last >= 0 %}▲{% else %}▼{% endif %} {{ kpi.vs_last }}% compared with last month ({{ kpi.last_month|rand }}){% else %}last month: {{ kpi.last_month|rand }}{% endif %}</div></div>
+  <div class="card stat"><div class="label">Sales since {{ kpi.since|date:"j F" }}</div><div class="value">{{ kpi.ytd|rand }}</div><div class="sub">{{ kpi.ytd_orders }} orders · average {{ kpi.avg_order|rand }}</div></div>
+  <div class="card stat"><div class="label">Best month</div><div class="value">{% if kpi.best_month %}{{ kpi.best_month|date:"F" }}{% else %}—{% endif %}</div><div class="sub">{% if kpi.best_month %}{{ kpi.best_month_total|rand }} in sales{% endif %}</div></div>
+  <div class="card stat"><div class="label">Buyers</div><div class="value">{{ kpi.buyers }}</div><div class="sub">{{ kpi.repeat_buyers }} bought more than once</div></div>
+</div><br>
+<h2 class="section-title">Sales trends</h2>
+<p class="small muted" style="margin-top:-6px">Goods value excluding VAT, by order date, for paid orders. Hover a point to see the figures.</p>
+<div class="grid grid-2">
+  <div class="card"><h3>Money in and money out per month</h3><div class="chart-box"><canvas id="inout" aria-label="Sales and costs per month"></canvas></div>
+    <p class="small muted">Sales against the costs you recorded under Farm records. Months where the dashed line is above the solid line cost more than they earned.</p></div>
+  <div class="card"><h3>Profit so far this season</h3><div class="chart-box"><canvas id="running" aria-label="Running profit"></canvas></div>
+    <p class="small muted">Running total of sales minus costs since {{ kpi.since|date:"j F" }}. Early in the season it is usually below zero because inputs are paid before the harvest is sold.</p></div>
+  <div class="card"><h3>Sales per week — last 12 weeks</h3><div class="chart-box"><canvas id="weekly" aria-label="Weekly sales"></canvas></div></div>
+  <div class="card"><h3>Orders and buyers per month</h3><div class="chart-box"><canvas id="activity" aria-label="Orders and buyers per month"></canvas></div></div>
+</div>
+<div class="card" style="margin-top:16px"><h3>Sales per month by product</h3><div class="chart-box tall"><canvas id="byproduct" aria-label="Sales per product per month"></canvas></div></div>
+<div class="card"><div class="row between"><h3>My price compared with the market</h3>
+  {% if trends.prices %}<select id="price-product" class="input" style="width:auto">{% for p in trends.prices %}<option value="{{ forloop.counter0 }}">{{ p.name }}</option>{% endfor %}</select>{% endif %}</div>
+  {% if trends.prices %}<div class="chart-box"><canvas id="prices" aria-label="My average price and the market average"></canvas></div>
+  <p class="small muted">The market line only shows months where at least {{ min_farms }} farms sold the product, so no single farm's prices can be worked out.</p>
+  {% else %}<p class="empty">No sales yet.</p>{% endif %}</div>
+<details class="panel"><summary>Show the numbers behind the graphs</summary>
+<div class="table-wrap"><table class="data small"><thead><tr><th>Month</th><th class="num">Sales</th><th class="num">Costs</th><th class="num">Profit so far</th><th class="num">Orders</th><th class="num">Buyers</th></tr></thead>
+<tbody>{% for row in trend_rows %}<tr><td>{{ row.0 }}</td><td class="num">{{ row.1|rand }}</td><td class="num">{{ row.2|rand }}</td><td class="num">{{ row.3|rand }}</td><td class="num">{{ row.4 }}</td><td class="num">{{ row.5 }}</td></tr>{% endfor %}</tbody></table></div>
+</details>
+
+<div class="card" id="profit"><h2>Which crops and herds make money?</h2>
+  <div class="help-box">
+    <p><strong>How to read this:</strong> for each crop and herd, <em>You spent</em> is the total of the costs you recorded under Farm records (seed, fertiliser, feed, labour…). <em>You earned</em> is what buyers paid for stock you listed from that crop or herd. <strong>Profit = earned − spent.</strong></p>
+    <p>If you still have stock to sell, the profit so far can look low or negative. The last line shows what your profit will be if the rest sells at today's market price.</p>
+    <div class="legend-inline"><span><i style="background:#c9a27a"></i>Spent</span><span><i style="background:var(--green-700)"></i>Earned</span><span><i style="background:#a9c7a3"></i>Value of stock not sold yet</span></div>
+  </div><br>
+  {% for e in econ %}{% include "farm/_profit_card.html" with link=True %}
+  {% empty %}<p class="empty">Record costs and harvests under <a href="{% url 'farm:home' %}">Farm records</a> to see which crops and herds make money.</p>{% endfor %}
+</div>
+
+<div class="card"><h2>My prices compared with the market (since {{ kpi.since|date:"j F" }})</h2>
+<div class="table-wrap"><table class="data"><thead><tr><th>Product</th><th class="num">Sold</th><th class="num">Income</th><th class="num">My average</th><th class="num">Market average</th><th>Compared</th></tr></thead>
+<tbody>{% for p in products %}<tr><td>{{ p.commodity }}</td><td class="num">{{ p.qty|qty }} {{ p.unit }}</td><td class="num">{{ p.revenue|rand }}</td><td class="num">{{ p.avg|rand }}</td><td class="num">{% if p.market %}{{ p.market|rand }}{% else %}<span class="muted small">too few farms</span>{% endif %}</td>
+<td>{% if p.vs_market is not None %}<span class="badge {% if p.vs_market < -5 %}danger{% elif p.vs_market > 5 %}{% else %}grey{% endif %}">{% if p.vs_market >= 0 %}+{% endif %}{{ p.vs_market }}%</span>{% if p.vs_market < -5 %} <span class="small muted">you may be underpricing</span>{% endif %}{% else %}—{% endif %}</td></tr>
+{% empty %}<tr><td colspan="6" class="empty">No sales in the last 12 months.</td></tr>{% endfor %}</tbody></table></div></div>
+
+<div class="grid grid-2">
+  <div class="card"><h2>Who buys from me</h2><div class="chart-box"><canvas id="cats"></canvas></div></div>
+  <div class="card"><h2>Where my buyers are</h2><div class="chart-box"><canvas id="provs"></canvas></div></div>
+</div>
+<div class="grid grid-2" style="margin-top:16px">
+  <div class="card"><h2>Coming harvests and when to sell</h2><ul class="list-plain">{% for u in upcoming %}<li><strong>{{ u.p.commodity }}</strong> · {{ u.p.field.name }} · expected {{ u.p.expected_harvest|date:"d M Y" }} ({{ u.p.expected_yield|qty }} {{ u.p.unit }})
+    <div class="small muted">{% if u.market %}Market now {{ u.market|rand }}/{{ u.p.unit }}. {% endif %}{% if u.best %}Prices are usually best in {{ u.best|join:", " }}.{% endif %}</div></li>{% empty %}<li class="muted">No harvests expected in the next 4 months.</li>{% endfor %}</ul></div>
+  <div class="card"><h2>Losses since {{ kpi.since|date:"j F" }}</h2><div class="stat" style="padding:0"><div class="value" style="color:var(--soil)">{{ waste_total|rand }}</div></div>
+    <ul class="list-plain small">{% for r, v in waste_by.items %}<li class="row between"><span>{{ r }}</span><span>{{ v|rand }}</span></li>{% empty %}<li class="muted">No losses recorded.</li>{% endfor %}</ul>
+    <p class="small"><a href="{% url 'finance:reports' %}?report=wastage">Wastage report</a></p></div>
+</div>
+{{ chart|json_script:"chart-data" }}
+{% endblock %}
+{% block scripts %}{% include "core/charts.html" %}{% endblock %}

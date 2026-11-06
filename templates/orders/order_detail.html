@@ -1,0 +1,39 @@
+{% extends "base.html" %}{% load agri %}{% block title %}{{ order.number }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Order {{ order.number }}</h1><p>Order date {{ order.order_date|date:"d M Y" }} · by {{ order.buyer.get_full_name }} · {{ subs|length }} farm{{ subs|length|pluralize }} · {{ order.get_delivery_method_display }}</p></div>
+  <div class="row"><span class="badge {{ order.payment.badge }}">{{ order.payment.status_label }}</span><strong>{{ order.grand_total|rand }}</strong>
+  {% if user == order.buyer %}<form method="post" action="{% url 'orders:reorder' order.pk %}">{% csrf_token %}<button class="btn secondary small">↻ Buy again</button></form>{% endif %}</div></div>
+{% include "orders/_order_summary.html" %}
+
+{% if order.payment.online and order.payment.status == "pending" and user == order.buyer %}
+{% if order.suborders.all.0.status == "pending" %}<div class="card"><h2>Card payment not finished</h2>
+  <p>Pay <strong>{{ order.payment.amount|rand }}</strong> on {{ order.payment.gateway_name }}'s secure page. Your items are held for a short time; unpaid card orders are cancelled automatically.</p>
+  <div class="row" style="gap:8px;flex-wrap:wrap"><a class="btn" href="{% url 'orders:card_pay' order.pk %}">Pay now with {{ order.payment.gateway_name }}</a>
+  <form method="post" action="{% url 'orders:card_check' order.pk %}">{% csrf_token %}<button class="btn secondary">I've paid — check with {{ order.payment.gateway_name }}</button></form></div>
+</div>{% endif %}{% endif %}
+
+{% for s in subs %}
+<div class="card">
+  <div class="row between"><h2>From {{ s.farmer.farm.farm_name }}</h2><span class="badge s-{{ s.status }}">{{ s.get_status_display }}</span></div>
+  {% if s.progress %}<div class="steps">{% for label, state in s.progress %}<span class="{{ state }}">{{ label }}</span>{% endfor %}</div>{% endif %}
+  {% include "orders/_sub_detail.html" %}
+  {% for it in s.items.all %}{% in_set reviewed s.pk it.listing_id as done %}{% if s.status == "completed" and user == order.buyer and not done %}
+    <details class="small"><summary>Review {{ it.product_name }}</summary>
+    <form method="post" action="{% url 'orders:add_review' s.pk it.listing_id %}" class="inline-fields">{% csrf_token %}{{ review_form.rating }}{{ review_form.comment }}<button class="btn small">Submit</button></form></details>{% endif %}{% endfor %}
+  <div class="stack" style="margin-top:12px">
+      <div class="row">
+        {% if user == order.buyer %}
+          {% if s.status == "pending" or s.status == "approved" %}<form method="post" action="{% url 'orders:suborder_action' s.pk 'cancel' %}" onsubmit="return confirm('Cancel this part of the order?')">{% csrf_token %}<button class="btn danger small">Cancel</button></form>{% endif %}
+          {% if s.status == "delivered" %}<form method="post" action="{% url 'orders:suborder_action' s.pk 'confirm' %}">{% csrf_token %}<button class="btn small">Confirm received</button></form>{% endif %}
+        {% endif %}
+      </div>
+      {% if s.status == "delivered" and user == order.buyer %}
+        <details><summary class="small">Report a problem (within 3 days)</summary>
+        <form method="post" enctype="multipart/form-data" action="{% url 'orders:raise_dispute' s.pk %}" novalidate>{% csrf_token %}{% with form=dispute_form %}{% include "includes/form.html" %}{% endwith %}<button class="btn danger small">Send complaint</button></form></details>
+      {% endif %}
+      {% if s.dispute %}<div class="notice small"><strong>Complaint:</strong> {% if s.dispute.status == "open" %}waiting for {{ s.farmer.farm.farm_name }} to answer{% else %}{{ s.dispute.get_status_display }}{% if s.dispute.resolution_note %} — {{ s.dispute.resolution_note }}{% endif %}{% endif %}</div>{% endif %}
+      {% for r in s.refunds.all %}<div class="notice small"><strong>Refund {{ r.amount|rand }}:</strong> {% if r.status == "processed" %}sent back to your card{% if r.processed_at %} on {{ r.processed_at|date:"d M Y" }}{% endif %}{% else %}being sent back to your card{% endif %}.</div>{% endfor %}
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

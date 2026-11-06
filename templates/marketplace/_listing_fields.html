@@ -1,0 +1,18 @@
+{% load agri %}{# Shared body of the add/edit listing form. Needs: form, lform (livestock details or None), listing (edit) or None #}
+{% if form.non_field_errors %}<div class="nonfield">{{ form.non_field_errors }}</div>{% endif %}
+{% if lform and lform.non_field_errors %}<div class="nonfield">{{ lform.non_field_errors }}</div>{% endif %}
+<p class="small muted std-ref"></p>
+<div class="notice small price-guide" hidden style="margin-bottom:12px"></div>
+<div class="form-grid">
+  {% for field in form %}{% if field.name|slice:":4" != "tier" and field.name != "photos" and field.name != "description" %}{% include "includes/field.html" %}{% endif %}{% endfor %}
+  <div class="full">{% with field=form.description %}{% include "includes/field.html" %}{% endwith %}</div>
+</div>
+{% if lform %}<h3>Animal details</h3><div class="form-grid">{% for field in lform %}{% include "includes/field.html" %}{% endfor %}</div>{% endif %}
+<details class="inline-edit" style="margin:6px 0 12px"><summary class="small"><strong>Bulk prices</strong> <span class="muted">(optional — cheaper price for big orders)</span></summary>
+<div class="form-grid" style="margin-top:8px">
+  {% with field=form.tier1_min %}{% include "includes/field.html" %}{% endwith %}{% with field=form.tier1_price %}{% include "includes/field.html" %}{% endwith %}
+  {% with field=form.tier2_min %}{% include "includes/field.html" %}{% endwith %}{% with field=form.tier2_price %}{% include "includes/field.html" %}{% endwith %}
+  {% with field=form.tier3_min %}{% include "includes/field.html" %}{% endwith %}{% with field=form.tier3_price %}{% include "includes/field.html" %}{% endwith %}
+</div></details>
+{% if listing %}<div class="thumbs">{% for p in listing.photos.all %}<div><img src="{{ p.image.url }}" alt=""><button form="del{{ p.pk }}" class="linkbtn small">remove</button></div>{% endfor %}</div>{% endif %}
+{% with field=form.photos %}{% include "includes/field.html" %}{% endwith %}

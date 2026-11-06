@@ -1,0 +1,3 @@
+{% load agri %}
+<div class="card"><h2>Is it making money?</h2>{% include "farm/_profit_card.html" with link=False %}
+<p class="small muted">"Spent" adds up the costs you recorded below. "Earned" is from sales of stock listed from this {% if e.unit == 'head' %}herd{% else %}crop{% endif %}; the light part of the bar is what your unsold stock is worth.</p></div>

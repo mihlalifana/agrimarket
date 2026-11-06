@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% load agri %}{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ title }}</h1><p>Each row is one farm's part of an order: who ordered, what, from whom and when.</p></div>
+  <div class="row">{% if admin_view %}<form class="inline-fields" method="get"><input class="input" name="q" value="{{ q }}" placeholder="Order number"><input type="hidden" name="status" value="{{ status }}"><button class="btn secondary">Search</button></form><a class="btn wheat" href="?unassigned=1">Needs distributor</a>{% endif %}
+  {% if not user.is_distributor %}<a class="btn secondary" href="{% url 'orders:register' %}">Order register</a>{% endif %}</div></div>
+<div class="tabs"><a href="?" class="{% if not status %}on{% endif %}">{% if title == "My deliveries" %}Open{% else %}All{% endif %}</a>{% for v, l in statuses %}<a href="?status={{ v }}" class="{% if v == status %}on{% endif %}">{{ l }}</a>{% endfor %}</div>
+<div class="card table-wrap"><table class="data">
+<thead><tr><th>Order · placed</th><th>Buyer</th>{% if not user.is_farmer %}<th>Seller (farm)</th>{% endif %}<th>Items ordered</th><th>Delivery</th><th>Payment</th><th>Status</th><th class="num">Total</th><th></th></tr></thead>
+<tbody>{% for s in page %}{% with o=s.order b=s.order.buyer %}<tr>
+  <td class="nowrap"><strong>{{ o.number }}</strong><div class="small muted">{{ o.order_date|date:"d M Y" }}<br>{{ o.created_at|date:"H:i" }}</div></td>
+  <td>{{ b.get_full_name }}<div class="small muted">{{ b.get_buyer_type_display|default:"Buyer" }}<br>{{ b.get_province_display }}</div></td>
+  {% if not user.is_farmer %}<td>{{ s.farmer.farm.farm_name }}<div class="small muted">{{ s.farmer.get_full_name }}<br>{{ s.farmer.farm.town }}, {{ s.farmer.farm.get_province_display }}</div></td>{% endif %}
+  <td>{% include "orders/_order_lines.html" %}</td>
+  <td class="small">{% if s.is_delivery %}Delivery to {{ o.get_delivery_province_display }}{% if s.scheduled_date %}<div>{{ s.scheduled_date|date:"d M" }} · {{ s.time_slot }}</div>{% endif %}{% if s.distributor %}<div class="muted">{{ s.distributor.get_full_name }}</div>{% elif admin_view %}<div><span class="badge wheat">No distributor</span></div>{% endif %}{% else %}Farm collection{% endif %}{% if s.delivered_at %}<div class="muted">Delivered {{ s.delivered_at|date:"d M H:i" }}</div>{% endif %}</td>
+  <td class="small">{{ o.get_payment_method_display }}<div><span class="badge {{ o.payment.badge }}">{{ o.payment.status_label }}</span></div></td>
+  <td><span class="badge s-{{ s.status }}">{{ s.get_status_display }}</span>{% if s.invoice_number %}<div class="small muted">{{ s.invoice_number }}</div>{% endif %}</td>
+  <td class="num">{{ s.total|rand }}<div class="small muted">goods {{ s.goods_subtotal|rand }}</div></td>
+  <td class="right"><a class="btn secondary small" href="{% url 'orders:suborder' s.pk %}">Open</a></td></tr>{% endwith %}
+{% empty %}<tr><td colspan="9" class="empty">No orders here.</td></tr>{% endfor %}</tbody></table></div>
+{% include "includes/pagination.html" %}
+{% endblock %}

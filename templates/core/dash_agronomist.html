@@ -1,0 +1,29 @@
+{% extends "base.html" %}{% load agri %}{% block title %}My farms{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>My farms</h1><p>{{ today|date:"l, d F Y" }} · farms that asked you to advise them</p></div>
+  {% if user.is_verified_agronomist %}<a class="btn" href="{% url 'advisory:alerts' %}#new-alert">+ Pest alert</a>{% endif %}</div>
+{% if not user.is_verified_agronomist %}
+  {% if user.agronomist.status == "rejected" %}<ul class="messages"><li class="error">Registration not approved: {{ user.agronomist.rejection_reason }}</li></ul>
+  {% else %}<div class="notice">Your professional registration ({{ user.agronomist.get_body_display }} {{ user.agronomist.registration_no }}) is being checked. Farmers can add you once you are verified.</div>{% endif %}
+{% else %}
+<div class="grid grid-4">
+  <div class="card stat"><div class="label">Farms</div><div class="value">{{ farms|length }}</div></div>
+  <div class="card stat {% if due %}alert{% endif %}"><div class="label">Visit due</div><div class="value">{{ due|length }}</div><div class="sub">not visited in 3 weeks</div></div>
+  <div class="card stat"><div class="label">Advice not done yet</div><div class="value">{{ open_recs }}</div></div>
+  <div class="card stat"><div class="label">Visits this month</div><div class="value">{{ visits_month }}</div></div>
+</div><br>
+<div class="card table-wrap"><h2>Farms</h2><table class="data"><thead><tr><th>Farm</th><th class="num">Land</th><th>Growing now</th><th>Last visit</th><th class="num">Open advice</th><th>Sprays</th><th></th></tr></thead>
+<tbody>{% for r in farms %}<tr>
+  <td><strong>{{ r.farm.farm_name }}</strong><div class="small muted">{{ r.farmer.get_full_name }} · {{ r.farm.town }}, {{ r.farm.get_province_display }}</div></td>
+  <td class="num">{{ r.ha|qty }} ha</td><td>{{ r.crops }}</td>
+  <td>{% if r.last_visit %}{{ r.last_visit|date:"d M" }} <span class="small {% if r.days_since > 21 %}badge wheat{% else %}muted{% endif %}">{{ r.days_since }} days ago</span>{% else %}<span class="badge wheat">Never</span>{% endif %}</td>
+  <td class="num">{{ r.open_recs }}{% if r.overdue %} <span class="badge danger">{{ r.overdue }} late</span>{% endif %}</td>
+  <td>{% if r.in_phi %}<span class="badge wheat">{{ r.in_phi }} in waiting period</span>{% else %}<span class="small muted">—</span>{% endif %}</td>
+  <td class="right"><a class="btn small" href="{% url 'advisory:farm' r.farmer.pk %}">Open farm</a></td></tr>
+{% empty %}<tr><td colspan="7" class="empty">No farms yet. Farmers add you from their <em>Agronomist advice</em> page.</td></tr>{% endfor %}</tbody></table></div>
+<div class="grid grid-2">
+  <div class="card"><h2>My recent visits</h2><ul class="list-plain">{% for v in recent_visits %}<li><strong>{{ v.farmer.farm.farm_name }}</strong> · {{ v.field.name }} <span class="small muted">{{ v.visited_on|date:"d M" }}</span><div class="small">{{ v.get_problem_display }}{% if v.problem_detail %}: {{ v.problem_detail }}{% endif %}</div></li>{% empty %}<li class="muted">No visits yet.</li>{% endfor %}</ul></div>
+  <div class="card"><h2>My pest alerts</h2><ul class="list-plain">{% for a in my_alerts %}<li><span class="badge {% if a.severity == 'outbreak' %}danger{% elif a.severity == 'warning' %}wheat{% else %}grey{% endif %}">{{ a.get_severity_display }}</span> {{ a.title }} <span class="small muted">{{ a.get_province_display }} · {{ a.farms_told }} farms told</span></li>{% empty %}<li class="muted">None sent.</li>{% endfor %}</ul></div>
+</div>
+{% endif %}
+{% endblock %}

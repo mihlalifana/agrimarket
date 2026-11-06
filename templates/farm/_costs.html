@@ -1,0 +1,8 @@
+{% load agri %}
+<div class="card"><h2>Costs</h2>
+  <table class="data small"><tbody>{% for c in costs %}<tr><td>{{ c.incurred_on|date:"d M Y" }}</td><td>{{ c.get_category_display }}{% if c.description %}<div class="muted">{{ c.description }}</div>{% endif %}</td><td class="num">{{ c.amount|rand }}</td>
+  <td class="right"><form method="post" action="{% url 'farm:cost_delete' c.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><button class="linkbtn muted" aria-label="Remove">✕</button></form></td></tr>{% empty %}<tr><td class="muted">No costs yet.</td></tr>{% endfor %}</tbody></table><hr>
+  <form method="post" action="{% url 'farm:costs' %}" novalidate>{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">
+    {% for field in cform %}{% if field.name == "target" %}<input type="hidden" name="target" value="{{ field.value }}">{% else %}{% include "includes/field.html" %}{% endif %}{% endfor %}
+    <button class="btn secondary block">Add cost</button></form>
+</div>

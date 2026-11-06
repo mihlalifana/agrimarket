@@ -1,0 +1,20 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Edit {{ listing.name }}{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'marketplace:my_listings' %}">← My stock</a></p>
+<div class="page-head"><div><h1>{{ listing.name }}</h1>
+  <p><code>{{ listing.batch_number }}</code> · {{ listing.qty_display }} in stock{% if listing.harvest %} · from harvest of {{ listing.harvest.harvested_on|date:"d M Y" }}, {{ listing.harvest.planting.field.name }}{% endif %}</p></div></div>
+<div class="split">
+<form method="post" enctype="multipart/form-data" novalidate class="card" data-cmap="cmap" data-guide-url="{% url 'insights:price_guide' %}">{% csrf_token %}
+  {% include "marketplace/_listing_fields.html" %}
+  <div class="row"><button class="btn">Save changes</button><a class="btn secondary" href="{% url 'marketplace:my_listings' %}">Cancel</a></div>
+</form>
+{% for p in listing.photos.all %}<form id="del{{ p.pk }}" method="post" action="{% url 'marketplace:photo_delete' p.pk %}">{% csrf_token %}</form>{% endfor %}
+<aside class="stack">
+  <div class="card"><h3>Adjust stock</h3>
+    <p class="small muted">Add a new harvest to this batch, or record a loss. Every change needs a reason; losses appear in the wastage report.</p>
+    <form method="post" action="{% url 'marketplace:listing_adjust' listing.pk %}" novalidate>{% csrf_token %}{% with form=adjust_form %}{% include "includes/form.html" %}{% endwith %}<button class="btn block">Save adjustment</button></form></div>
+  <div class="card"><h3>Recent adjustments</h3><ul class="list-plain small">{% for a in adjustments %}<li><strong>{% if a.quantity_change > 0 %}+{% endif %}{{ a.quantity_change|qty }} {{ listing.unit }}</strong> · {{ a.get_reason_display }}<div class="muted">{{ a.created_at|date:"d M Y H:i" }}{% if a.note %} · {{ a.note }}{% endif %}</div></li>{% empty %}<li class="muted">None yet.</li>{% endfor %}</ul></div>
+</aside>
+</div>
+{{ form.commodity_map|json_script:"cmap" }}
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}{% block title %}Register as {{ kind|lower }}{% endblock %}
+{% block content %}
+<div class="auth-box wide card">
+  <h1>Register as {{ kind|lower }}</h1>
+  {% if kind == "Farmer" %}<p class="muted">After you register, an administrator checks your farm details. You can list stock once you are verified.</p>{% endif %}
+  {% if kind == "Agronomist" %}<p class="muted">After you register, an administrator checks your professional registration. Farmers can then add you as their agronomist; you only see the farms that add you.</p>{% endif %}
+  <form method="post" novalidate>{% csrf_token %}
+    {% if form.non_field_errors %}<div class="nonfield">{{ form.non_field_errors }}</div>{% endif %}
+    <h3>Your details</h3>
+    <div class="form-grid">
+      {% with field=form.first_name %}{% include "includes/field.html" %}{% endwith %}
+      {% with field=form.last_name %}{% include "includes/field.html" %}{% endwith %}
+      {% with field=form.email %}{% include "includes/field.html" %}{% endwith %}
+      {% with field=form.phone %}{% include "includes/field.html" %}{% endwith %}
+      {% if form.buyer_type %}{% with field=form.buyer_type %}{% include "includes/field.html" %}{% endwith %}{% endif %}
+      {% with field=form.province %}{% include "includes/field.html" %}{% endwith %}
+      <div class="full">{% with field=form.address %}{% include "includes/field.html" %}{% endwith %}</div>
+    </div>
+    {% if kind == "Farmer" %}
+    <h3>Your farm</h3>
+    <div class="form-grid">
+      {% with field=form.farm_name %}{% include "includes/field.html" %}{% endwith %}
+      {% with field=form.town %}{% include "includes/field.html" %}{% endwith %}
+      {% with field=form.brand_mark %}{% include "includes/field.html" %}{% endwith %}
+      {% with field=form.is_vat_registered %}{% include "includes/field.html" %}{% endwith %}
+      {% with field=form.vat_number %}{% include "includes/field.html" %}{% endwith %}
+    </div>
+    {% endif %}
+    {% if kind == "Agronomist" %}
+    <h3>Professional registration</h3>
+    <div class="form-grid">
+      {% with field=form.body %}{% include "includes/field.html" %}{% endwith %}
+      {% with field=form.registration_no %}{% include "includes/field.html" %}{% endwith %}
+      {% with field=form.qualification %}{% include "includes/field.html" %}{% endwith %}
+      {% with field=form.company %}{% include "includes/field.html" %}{% endwith %}
+      <div class="full">{% with field=form.crops %}{% include "includes/field.html" %}{% endwith %}</div>
+    </div>
+    {% endif %}
+    <h3>Password</h3>
+    <div class="form-grid">
+      {% with field=form.password1 %}{% include "includes/field.html" %}{% endwith %}
+      {% with field=form.password2 %}{% include "includes/field.html" %}{% endwith %}
+    </div>
+    {% with field=form.popia_consent %}{% include "includes/field.html" %}{% endwith %}
+    <p class="small muted">Privacy notice: we use your details only to run your account and orders. Farmers see a buyer's contact details only for that buyer's orders. You can ask for your personal information to be removed at any time from your profile.</p>
+    <button class="btn block">Create account</button>
+  </form>
+</div>
+{% endblock %}

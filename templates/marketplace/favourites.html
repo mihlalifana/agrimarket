@@ -1,0 +1,8 @@
+{% extends "base.html" %}{% block title %}Favourite farms{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Favourite farms</h1><p>You are notified when these farms list new stock. <a href="{% url 'marketplace:catalog' %}?favourites=on">Show only their stock</a></p></div></div>
+<div class="card table-wrap"><table class="data"><thead><tr><th>Farm</th><th>Location</th><th class="num">Listings now</th><th>Following since</th><th></th></tr></thead>
+<tbody>{% for f, n in rows %}<tr><td><a href="{% url 'marketplace:farmer_page' f.farmer.pk %}"><strong>{{ f.farmer.farm.farm_name }}</strong></a></td><td>{{ f.farmer.farm.town }}, {{ f.farmer.farm.get_province_display }}</td><td class="num">{{ n }}</td><td>{{ f.created_at|date:"d M Y" }}</td>
+<td class="right"><form method="post" action="{% url 'marketplace:toggle_favourite' f.farmer.pk %}">{% csrf_token %}<button class="btn danger small">Unfollow</button></form></td></tr>
+{% empty %}<tr><td colspan="5" class="empty">You don't follow any farms yet. Use "Follow farm" on a listing or farm page.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

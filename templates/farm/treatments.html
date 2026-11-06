@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% block title %}Treatment register{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Treatment register</h1><p>Every vaccination and treatment, with its withdrawal period. Print this for inspections.</p></div><button class="btn secondary no-print" onclick="window.print()">Print</button></div>
+{% include "farm/_nav.html" %}
+<div class="tabs no-print"><a href="?" class="{% if not only %}on{% endif %}">All</a><a href="?active=1" class="{% if only %}on{% endif %}">In withdrawal now</a></div>
+<div class="card table-wrap"><table class="data"><thead><tr><th>Date</th><th>Herd</th><th>Type</th><th>Remedy</th><th>Act 36 reg. no.</th><th>Dose</th><th>Animals</th><th>Withdrawal ends</th><th>By</th></tr></thead>
+<tbody>{% for t in rows %}<tr><td class="nowrap">{{ t.treated_on|date:"d M Y" }}</td><td><a href="{% url 'farm:herd' t.herd.pk %}">{{ t.herd.name }}</a></td><td>{{ t.get_kind_display }}</td><td>{{ t.remedy }}</td><td>{{ t.registration_no|default:"—" }}</td><td>{{ t.dose|default:"—" }}</td><td>{{ t.animals|default:"Whole herd" }}</td>
+<td class="nowrap">{% if t.withdrawal_days %}<span class="badge {% if t.in_withdrawal %}danger{% else %}grey{% endif %}">{{ t.withdrawal_ends|date:"d M Y" }}</span>{% else %}—{% endif %}</td><td>{{ t.administered_by|default:"—" }}</td></tr>
+{% empty %}<tr><td colspan="9" class="empty">No treatments recorded.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

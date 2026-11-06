@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% block title %}My profile{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>My profile</h1><p>{{ user.email }} · {{ user.get_role_display }}</p></div></div>
+{% if user.is_farmer and user.farm %}
+  {% if user.farm.status == "pending" %}<div class="notice">Your farm is waiting for verification by an administrator. You can list stock once it is approved.</div><br>
+  {% elif user.farm.status == "rejected" %}<div class="messages"><li class="error">Verification rejected: {{ user.farm.rejection_reason }}. Update your details and contact the administrator.</li></div>{% endif %}
+{% endif %}
+<form method="post" novalidate>{% csrf_token %}
+<div class="grid grid-2">
+  <div class="card"><h2>Personal details</h2>{% include "includes/form.html" %}</div>
+  {% if farm_form %}<div class="card"><h2>Farm details</h2>{% with form=farm_form %}{% include "includes/form.html" %}{% endwith %}
+    <p class="small muted">VAT status: {% if user.farm.is_vat_registered %}registered ({{ user.farm.vat_number }}){% else %}not VAT registered{% endif %}. Contact the administrator to change it.</p>
+    {% include "accounts/_payout_status.html" with farm=user.farm %}</div>{% endif %}
+</div>
+<p><button class="btn">Save changes</button></p>
+</form>
+<details class="panel" id="password"><summary>Change password</summary><div class="panel-body" style="max-width:460px">
+  <form method="post" action="{% url 'accounts:change_password' %}" novalidate>{% csrf_token %}{% with form=pform %}{% include "includes/form.html" %}{% endwith %}<button class="btn">Change password</button></form></div></details>
+<div class="card">
+  <h2>Delete my personal information</h2>
+  <p class="muted small">Under POPIA you may ask us to remove your personal information. Your name, email, phone and address are erased and your account is closed. Order and invoice records are kept for 5 years as required for tax purposes, without your personal details.</p>
+  <form method="post" action="{% url 'accounts:request_deletion' %}" onsubmit="return confirm('This closes your account permanently. Continue?')">{% csrf_token %}<button class="btn danger">Remove my personal information</button></form>
+</div>
+{% endblock %}

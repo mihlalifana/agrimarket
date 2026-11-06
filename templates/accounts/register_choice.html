@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% block title %}Register{% endblock %}
+{% block content %}
+<div class="auth-box wide">
+  <h1>Create an account</h1>
+  <p class="muted">Choose how you will use AgriMarket.</p>
+  <div class="choice-cards">
+    <a href="{% url 'accounts:register_buyer' %}"><div class="card"><h2>I want to buy</h2><p class="muted">Retailers, mills, supermarkets, butchers and individuals buying produce or livestock directly from farms.</p><span class="btn">Register as buyer</span></div></a>
+    <a href="{% url 'accounts:register_farmer' %}"><div class="card"><h2>I am a farmer</h2><p class="muted">Sell your crops, vegetables, animal products and livestock. Your farm is verified before your listings go live.</p><span class="btn wheat">Register as farmer</span></div></a>
+    <a href="{% url 'advisory:register' %}"><div class="card"><h2>I am an agronomist</h2><p class="muted">Advise the farms that invite you: soil tests, field visits, spray programmes and pest alerts. Your professional registration is checked first.</p><span class="btn secondary">Register as agronomist</span></div></a>
+  </div>
+  <p class="small muted">Already registered? <a href="{% url 'accounts:login' %}">Log in</a></p>
+</div>
+{% endblock %}

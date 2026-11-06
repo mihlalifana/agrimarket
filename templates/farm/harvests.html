@@ -1,0 +1,49 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Harvest{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Harvest</h1><p>Crops that have reached their expected harvest date. Start harvesting, record each harvest, then list it for sale.</p></div></div>
+{% include "farm/_nav.html" %}
+<div class="split">
+  <div class="stack">
+    <div class="card"><h2>Ready to harvest</h2>
+      <div class="table-wrap"><table class="data"><thead><tr><th>Crop</th><th>Expected harvest</th><th class="num">Harvested</th><th>Status</th><th></th></tr></thead>
+      <tbody>{% for p in ready %}<tr{% if selected and p.pk == selected.pk %} style="background:var(--wheat-100)"{% endif %}>
+        <td><a href="{% url 'farm:planting' p.pk %}"><strong>{{ p.commodity }}</strong></a>{% if p.cultivar %} <span class="small muted">{{ p.cultivar }}</span>{% endif %}<div class="small muted">{{ p.field.name }} · {{ p.area_ha }} ha</div></td>
+        <td>{{ p.expected_harvest|date:"d M Y" }}<div class="small muted">{% if p.days_to_harvest < 0 %}{{ p.days_to_harvest|absval }} day{{ p.days_to_harvest|absval|pluralize }} ago{% else %}today{% endif %}</div></td>
+        <td class="num">{{ p.harvested_qty|qty }}<div class="small muted">of {{ p.expected_yield|qty }} {{ p.unit }}</div></td>
+        <td><span class="badge {% if p.status == 'growing' %}grey{% else %}wheat{% endif %}">{{ p.get_status_display }}</span></td>
+        <td class="nowrap">{% if p.status == "growing" %}{% if p.blocked %}<span class="badge danger" title="{{ p.blocked.product }}: pre-harvest interval">Safe from {{ p.blocked.safe_from|date:"d M" }}</span>{% else %}<form method="post" class="inline-form">{% csrf_token %}<input type="hidden" name="planting" value="{{ p.pk }}"><button class="btn small" name="action" value="start">Start harvesting</button></form>{% endif %}
+          {% else %}<a class="btn small secondary" href="?crop={{ p.pk }}#record">Record</a>{% endif %}</td></tr>
+      {% empty %}<tr><td colspan="5" class="empty">No crops are due for harvest yet.{% if next_due %} Next: {{ next_due.commodity }} on {{ next_due.field.name }}, expected {{ next_due.expected_harvest|date:"d M Y" }}.{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+      {% if not_due %}<p class="small muted">{{ not_due }} other crop{{ not_due|pluralize }} still growing. {{ not_due|pluralize:"It appears,They appear" }} here on {{ not_due|pluralize:"its,their" }} expected harvest date.</p>{% endif %}
+    </div>
+
+    <div class="card" id="harvested"><h2>Harvested stock</h2>
+      <div class="table-wrap"><table class="data"><thead><tr><th>Harvested</th><th>Crop</th><th class="num">Quantity</th><th>Grade</th><th>For sale</th></tr></thead>
+      <tbody>{% for h in unlisted %}<tr data-id="{{ h.pk }}"><td>{{ h.harvested_on|date:"d M Y" }}</td><td>{{ h.planting.commodity }}<div class="small muted">{{ h.planting.field.name }}</div></td><td class="num">{{ h.quantity|qty }} {{ h.planting.unit }}</td><td>{{ h.grade|default:"—" }}</td>
+        <td><a class="btn small" href="{% url 'marketplace:my_listings' %}?harvest={{ h.pk }}#add-produce">List for sale</a></td></tr>{% endfor %}
+      {% for h in listed %}<tr><td>{{ h.harvested_on|date:"d M Y" }}</td><td>{{ h.planting.commodity }}<div class="small muted">{{ h.planting.field.name }}</div></td><td class="num">{{ h.quantity|qty }} {{ h.planting.unit }}</td><td>{{ h.grade|default:"—" }}</td>
+        <td><a href="{% url 'marketplace:listing' h.listing.pk %}">{{ h.listing.batch_number }}</a> <span class="small muted">{{ h.listing.qty_display }} left</span></td></tr>{% endfor %}
+      {% if not unlisted and not listed %}<tr><td colspan="5" class="empty">No harvests recorded yet.</td></tr>{% endif %}</tbody></table></div>
+    </div>
+  </div>
+
+  <aside class="stack" id="record">
+    {% if selected and selected.status == "harvesting" %}
+      <div class="card"><h2>Record a harvest</h2>
+        <p class="small"><strong>{{ selected.commodity }}</strong>{% if selected.cultivar %} ({{ selected.cultivar }}){% endif %} · {{ selected.field.name }} · harvested so far {{ selected.harvested_qty|qty }} of {{ selected.expected_yield|qty }} {{ selected.unit }} expected</p>
+        {% if blocked %}<div class="notice small"><strong>Do not harvest yet:</strong> {{ blocked.product }} was sprayed on {{ blocked.applied_on|date:"d M" }}. Its pre-harvest interval ends on <strong>{{ blocked.safe_from|date:"d M Y" }}</strong>.</div>{% endif %}
+        <form method="post" novalidate>{% csrf_token %}<input type="hidden" name="planting" value="{{ selected.pk }}">{% with form=hform %}{% include "includes/form.html" %}{% endwith %}<button class="btn block" name="action" value="record">Save harvest</button></form>
+        {% if selected.harvests.exists %}<hr><form method="post">{% csrf_token %}<input type="hidden" name="planting" value="{{ selected.pk }}"><p class="small muted">All of this crop is picked? Finishing marks it Completed and removes it from this page.</p><button class="btn secondary block" name="action" value="finish">Finish harvesting this crop</button></form>{% endif %}
+      </div>
+    {% else %}
+      <div class="card small"><h3>How it works</h3><ol>
+        <li>A crop appears here on its expected harvest date.</li>
+        <li>Click <strong>Start harvesting</strong>. The crop changes from Growing to Harvesting. Not allowed while a spray's pre-harvest interval is running.</li>
+        <li>Record each harvest: date, quantity and grade.</li>
+        <li>Click <strong>List for sale</strong> next to the harvest.</li>
+        <li>When all of it is picked, click <strong>Finish harvesting</strong>. The crop becomes Completed.</li>
+      </ol></div>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

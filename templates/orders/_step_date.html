@@ -1,0 +1,1 @@
+{% if step_min %}<label class="small">Date<input class="input" type="date" name="on_date" value="{{ step_min|date:'Y-m-d' }}" min="{{ step_min|date:'Y-m-d' }}" max="{% now 'Y-m-d' %}"></label>{% endif %}

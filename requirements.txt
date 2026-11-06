@@ -1,0 +1,5 @@
+Django>=5.2,<6.0
+Pillow>=10.0
+reportlab>=4.0
+# Optional, for PostgreSQL:
+# psycopg[binary]>=3.1

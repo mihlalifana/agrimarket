@@ -1,0 +1,58 @@
+{% extends "base.html" %}{% load agri %}{% block title %}My stock{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>My stock</h1><p>Each listing is one batch of produce or one lot of livestock. Add new stock below — it appears in this list straight away.</p></div></div>
+{% if not user.is_verified_farmer %}<div class="notice">Your farm must be verified before you can add listings.</div><br>
+{% else %}
+<details class="panel" id="add-produce" {% if open_panel == "produce" %}open{% endif %}>
+  <summary>+ Add produce {% if harvest %}<span class="small muted" style="font-weight:400">from your harvest of {{ harvest.harvested_on|date:"d M" }} · {{ harvest.planting.field.name }}</span>{% endif %}</summary>
+  <div class="panel-body">
+    <form method="post" action="{% url 'marketplace:listing_create' %}" enctype="multipart/form-data" novalidate data-cmap="cmap-p" data-guide-url="{% url 'insights:price_guide' %}">{% csrf_token %}
+      <input type="hidden" name="kind" value="produce">{% if harvest %}<input type="hidden" name="from_harvest" value="{{ harvest.pk }}">{% endif %}
+      {% include "marketplace/_listing_fields.html" with form=pform lform=None listing=None %}
+      <button class="btn">Add to my stock</button>
+    </form>
+    {{ pform.commodity_map|json_script:"cmap-p" }}
+  </div>
+</details>
+<details class="panel" id="add-livestock" {% if open_panel == "livestock" %}open{% endif %}>
+  <summary>+ Add livestock</summary>
+  <div class="panel-body">
+    {% if not has_brand %}<div class="notice small">Add your registered brand mark to <a href="{% url 'accounts:profile' %}">your profile</a> before selling livestock.</div>{% else %}
+    <form method="post" action="{% url 'marketplace:listing_create' %}" enctype="multipart/form-data" novalidate data-cmap="cmap-l" data-guide-url="{% url 'insights:price_guide' %}">{% csrf_token %}
+      <input type="hidden" name="kind" value="livestock">
+      {% include "marketplace/_listing_fields.html" with form=lform_main lform=ldetail listing=None %}
+      <button class="btn">Add to my stock</button>
+    </form>
+    {{ lform_main.commodity_map|json_script:"cmap-l" }}{% endif %}
+  </div>
+</details>
+{% endif %}
+<div class="card">
+  <h2>Harvested stock ready to list</h2>
+  <p class="small muted">Harvest quantities are recorded once under Crops. Each unlisted harvest appears here automatically; choose which harvest to list for sale.</p>
+  <div class="table-wrap"><table class="data">
+    <thead><tr><th>Crop</th><th>Field</th><th>Harvested</th><th class="num">Quantity in stock</th><th></th></tr></thead>
+    <tbody>{% for h in unlisted_harvests %}<tr>
+      <td>{{ h.planting.commodity }}{% if h.grade %}<div class="small muted">{{ h.grade }}</div>{% endif %}</td>
+      <td>{{ h.planting.field.name }}</td><td>{{ h.harvested_on|date:"d M Y" }}</td>
+      <td class="num">{{ h.quantity|qty }} {{ h.planting.unit }}</td>
+      <td class="right">{% if user.is_verified_farmer %}<a class="btn small" href="{% url 'marketplace:my_listings' %}?harvest={{ h.pk }}#add-produce">List for sale</a>{% else %}<span class="small muted">Available after farm verification</span>{% endif %}</td>
+    </tr>{% empty %}<tr><td colspan="5" class="empty">No harvested stock waiting to be listed.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+<div class="tabs"><a href="?status=active" class="{% if status == 'active' %}on{% endif %}">Active</a><a href="?status=archived" class="{% if status == 'archived' %}on{% endif %}">Archived</a></div>
+<div class="card table-wrap"><table class="data">
+<thead><tr><th>Batch</th><th>Product</th><th class="num">Price</th><th class="num">In stock</th><th>Expiry</th><th>Status</th><th></th></tr></thead>
+<tbody>{% for l in listings %}<tr data-id="{{ l.pk }}">
+  <td><code>{{ l.batch_number }}</code></td>
+  <td><a href="{% url 'marketplace:listing' l.pk %}">{{ l.name }}</a><div class="small muted">{{ l.category.name }}{% if l.grade %} · {{ l.grade }}{% endif %}{% if l.harvest_id %} · from harvest{% endif %}{% if l.herd_id %} · herd {{ l.herd.name }}{% endif %}</div>{% if l.withdrawal_until %}<span class="badge danger">Hidden: withdrawal until {{ l.withdrawal_until|date:"d M" }}</span>{% endif %}</td>
+  <td class="num">{{ l.price|rand }} / {{ l.unit }}</td>
+  <td class="num">{{ l.qty_display }}{% if l.is_low_stock %}<div><span class="badge wheat">Low stock</span></div>{% endif %}</td>
+  <td>{% if l.expiry_date %}{{ l.expiry_date|date:"d M Y" }}{% if l.is_expired %} <span class="badge danger">Expired</span>{% elif l.is_near_expiry %} <span class="badge danger">Soon</span>{% endif %}{% else %}—{% endif %}</td>
+  <td>{% if l.quantity_available == 0 %}<span class="badge grey">Sold out</span>{% else %}<span class="badge">{{ l.get_status_display }}</span>{% endif %}</td>
+  <td class="right nowrap">
+    {% if l.status == "active" %}<a class="btn secondary small" href="{% url 'marketplace:listing_edit' l.pk %}">Edit / stock</a>
+    <form method="post" action="{% url 'marketplace:listing_remove' l.pk %}" class="inline-form" onsubmit="return confirm('Remove this listing?')">{% csrf_token %}<button class="btn danger small">Remove</button></form>
+    {% else %}<form method="post" action="{% url 'marketplace:listing_restore' l.pk %}" class="inline-form">{% csrf_token %}<button class="btn secondary small">Restore</button></form>{% endif %}
+  </td></tr>{% empty %}<tr><td colspan="7" class="empty">No listings here.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

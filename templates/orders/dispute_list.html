@@ -1,0 +1,8 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Complaints{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Complaints</h1><p>Buyers can complain within 3 days of delivery. Answer each one: refund in full, refund part, or explain why not.</p></div></div>
+<div class="card table-wrap"><table class="data"><thead><tr><th>Raised</th><th>Order</th><th>Buyer</th><th>Complaint</th><th>Status</th><th></th></tr></thead>
+<tbody>{% for d in disputes %}<tr><td>{{ d.created_at|date:"d M Y" }}</td><td>{{ d.suborder.order.number }}</td><td>{{ d.raised_by.get_full_name }}</td><td>{{ d.reason|truncatechars:80 }}</td>
+<td><span class="badge {% if d.status == 'open' %}danger{% else %}grey{% endif %}">{% if d.status == "open" %}Waiting for your answer{% else %}{{ d.get_status_display }}{% endif %}</span></td><td class="right"><a class="btn secondary small" href="{% url 'orders:dispute_detail' d.pk %}">{% if d.status == "open" %}Answer{% else %}Open{% endif %}</a></td></tr>
+{% empty %}<tr><td colspan="6" class="empty">No complaints.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

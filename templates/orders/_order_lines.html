@@ -1,0 +1,2 @@
+{% load agri %}{# items of one sub-order, compact: product · grade · qty × price #}
+<ul class="list-plain small" style="margin:0">{% for it in s.items.all %}<li style="padding:2px 0;border:0">{{ it.product_name }}{% if it.grade %} <span class="muted">· {{ it.grade }}</span>{% endif %} — <strong>{{ it.quantity|qty }} {{ it.unit }}</strong> × {{ it.unit_price|rand }}</li>{% endfor %}</ul>

@@ -1,0 +1,55 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Agronomist advice{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Agronomist advice</h1><p>Advice on your crops from a verified agronomist, your soil tests, spray records and pest alerts for your area.</p></div></div>
+{% include "farm/_nav.html" %}
+
+{% if alerts %}<div class="card"><h2>Pest and disease alerts in {{ user.get_province_display }}</h2><ul class="list-plain">
+{% for a in alerts %}<li><span class="badge {% if a.severity == 'outbreak' %}danger{% elif a.severity == 'warning' %}wheat{% else %}grey{% endif %}">{{ a.get_severity_display }}</span>
+  <strong>{{ a.title }}</strong> · {{ a.commodity }}{% if a.commodity_id in my_crops %} <span class="badge danger">You grow this</span>{% endif %}
+  <div class="small">{{ a.message }}</div><div class="small muted">{{ a.agronomist.get_full_name }} · {{ a.created_at|date:"d M" }} · until {{ a.valid_until|date:"d M" }}</div></li>{% endfor %}</ul></div>{% endif %}
+
+<div class="split">
+  <div class="stack">
+    <div class="card"><h2>Advice to act on</h2>
+    {% for r in open_recs %}<div class="rec {% if r.overdue %}late{% endif %}">
+      <div class="row between"><strong>{{ r.get_kind_display }}{% if r.field %} · {{ r.field.name }}{% endif %}{% if r.planting %} · {{ r.planting.commodity }}{% endif %}</strong>
+        {% if r.do_by %}<span class="badge {% if r.overdue %}danger{% else %}wheat{% endif %}">Do by {{ r.do_by|date:"d M" }}</span>{% endif %}</div>
+      <p style="margin:6px 0">{{ r.advice }}</p><div class="small muted">From {{ r.agronomist.get_full_name }} · {{ r.created_at|date:"d M Y" }}</div>
+      <form method="post" action="{% url 'advisory:rec_respond' r.pk %}" class="inline-fields" style="margin-top:8px">{% csrf_token %}
+        <select name="status" class="input"><option value="done">Done</option><option value="declined">Not doing it</option></select>
+        <input class="input" name="note" placeholder="Note (optional)"><button class="btn small">Save</button></form>
+    </div>{% empty %}<p class="muted">Nothing to act on.</p>{% endfor %}
+    {% if done_recs %}<details><summary class="small">Earlier advice</summary><ul class="list-plain small">{% for r in done_recs %}<li><span class="badge {% if r.status == 'done' %}{% else %}grey{% endif %}">{{ r.get_status_display }}</span> {{ r.get_kind_display }}: {{ r.advice }}{% if r.farmer_note %} <span class="muted">— {{ r.farmer_note }}</span>{% endif %}</li>{% endfor %}</ul></details>{% endif %}
+    </div>
+
+    <div class="card"><h2>Field visits</h2><ul class="list-plain">{% for v in visits %}<li><strong>{{ v.visited_on|date:"d M Y" }}</strong> · {{ v.field.name }}{% if v.planting %} · {{ v.planting.commodity }}{% endif %}{% if v.growth_stage %} · {{ v.growth_stage }}{% endif %}
+      <div class="small">{% if v.problem != "none" %}<span class="badge {% if v.severity == 'high' %}danger{% else %}wheat{% endif %}">{{ v.get_problem_display }}{% if v.problem_detail %}: {{ v.problem_detail }}{% endif %}</span> {% endif %}{{ v.observations }}</div>
+      <div class="small muted">{{ v.agronomist.get_full_name }}</div></li>{% empty %}<li class="muted">No visits yet.</li>{% endfor %}</ul></div>
+
+    <div class="card"><h2>Spray records</h2>
+      <p class="small muted">Every spray has a pre-harvest interval on its label. Harvests cannot be recorded on that crop until the interval has passed.</p>
+      <div class="table-wrap"><table class="data small"><thead><tr><th>Date</th><th>Crop</th><th>Product</th><th>Target</th><th>Harvest from</th></tr></thead>
+      <tbody>{% for s in sprays %}<tr><td>{{ s.applied_on|date:"d M" }}</td><td>{{ s.planting.commodity }} · {{ s.planting.field.name }}</td><td>{{ s.product }} <span class="muted">{{ s.registration_no }}</span><div class="muted">{{ s.rate }}</div></td><td>{{ s.target }}</td>
+      <td>{% if s.in_phi %}<span class="badge wheat">{{ s.safe_from|date:"d M" }}</span>{% else %}{{ s.safe_from|date:"d M" }}{% endif %}</td></tr>{% empty %}<tr><td colspan="5" class="empty">No sprays recorded.</td></tr>{% endfor %}</tbody></table></div>
+      <details class="panel" id="add-spray"><summary>Record a spray</summary>
+        <form method="post" action="{% url 'advisory:spray_add' %}" novalidate>{% csrf_token %}{% include "advisory/_spray_fields.html" with form=spray_form %}<button class="btn">Save spray</button></form></details>
+    </div>
+  </div>
+
+  <aside class="stack">
+    <div class="card"><h2>My agronomist</h2>
+      {% for l in links %}<div class="row between" style="padding:6px 0;border-bottom:1px solid var(--line)"><div><strong>{{ l.agronomist.get_full_name }}</strong>
+        <div class="small muted">{{ l.agronomist.agronomist.company|default:l.agronomist.agronomist.qualification }} · {{ l.agronomist.phone }}</div>
+        <div class="small muted">{{ l.agronomist.agronomist.registration }} · since {{ l.created_at|date:"d M Y" }}</div></div>
+        <form method="post" action="{% url 'advisory:link_end' l.pk %}" onsubmit="return confirm('Remove this agronomist? They will no longer see your farm records.')">{% csrf_token %}<button class="linkbtn small">Remove</button></form></div>
+      {% empty %}<p class="small muted">No agronomist yet. Adding one lets them see your fields, crops, harvests and crop costs — never your sales, buyers or bank details.</p>{% endfor %}
+      <form method="post" action="{% url 'advisory:link_add' %}" novalidate style="margin-top:10px">{% csrf_token %}{% with form=link_form %}{% include "includes/form.html" %}{% endwith %}<button class="btn block">Add agronomist</button></form>
+    </div>
+    <div class="card"><h2>Soil tests</h2><ul class="list-plain small">{% for t in soil %}<li><strong>{{ t.field.name }}</strong> · {{ t.sampled_on|date:"d M Y" }} · {{ t.lab }}
+      <div>pH {{ t.ph_kcl }} · P {{ t.p_mg_kg|floatformat:0 }} · K {{ t.k_mg_kg|floatformat:0 }} mg/kg{% if t.organic_carbon %} · C {{ t.organic_carbon }}%{% endif %}</div><div class="muted">{{ t.ph_note }} {{ t.p_note }}.</div></li>{% empty %}<li class="muted">No soil tests yet.</li>{% endfor %}</ul>
+      <details class="panel" id="add-soil"><summary>Add soil test</summary>
+        <form method="post" action="{% url 'advisory:soil_add' %}" novalidate>{% csrf_token %}{% with form=soil_form %}{% include "includes/form.html" %}{% endwith %}<button class="btn block">Save</button></form></details>
+    </div>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Farm records{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Farm records</h1><p>{{ user.farm.farm_name }} · {{ fields|length }} field{{ fields|length|pluralize }}, {{ total_ha|floatformat:1 }} ha · {{ herds|length }} herd{{ herds|length|pluralize }}</p></div>
+  <div class="row"><a class="btn" href="{% url 'farm:plantings' %}">+ Planting</a><a class="btn secondary" href="{% url 'farm:herds' %}">+ Herd</a><a class="btn secondary" href="{% url 'farm:costs' %}">+ Cost</a></div></div>
+{% include "farm/_nav.html" %}
+<div class="grid grid-4">
+  <div class="card stat"><div class="label">Crops in the ground</div><div class="value">{{ growing|length }}</div></div>
+  <div class="card stat {% if due %}alert{% endif %}"><div class="label">Harvest due in 30 days</div><div class="value">{{ due|length }}</div><div class="sub"><a href="{% url 'farm:harvests' %}">Open the Harvest page</a></div></div>
+  <div class="card stat {% if in_withdrawal %}alert{% endif %}"><div class="label">Herds in withdrawal</div><div class="value">{{ in_withdrawal|length }}</div><div class="sub">cannot be sold yet</div></div>
+  <div class="card stat"><div class="label">Costs this month</div><div class="value">{{ month_costs|rand }}</div></div>
+</div><br>
+<div class="grid grid-2">
+  <div class="card"><h2>Harvests coming up</h2><p class="small muted">Crops still growing that are due within 30 days.</p><ul class="list-plain">{% for p in due %}<li class="row between"><span><a href="{% url 'farm:planting' p.pk %}">{{ p.commodity }}</a> · {{ p.field.name }}{% if p.cultivar %} · {{ p.cultivar }}{% endif %}</span><span class="badge {% if p.days_to_harvest < 0 %}danger{% else %}wheat{% endif %}">{% if p.days_to_harvest < 0 %}{{ p.days_to_harvest|stringformat:"d"|slice:"1:" }} days overdue{% else %}in {{ p.days_to_harvest }} days{% endif %}</span></li>{% empty %}<li class="muted">Nothing due in the next 30 days.</li>{% endfor %}</ul></div>
+  <div class="card"><h2>Harvested but not listed</h2><ul class="list-plain">{% for h in unlisted %}<li class="row between"><span>{{ h.planting.commodity }} · {{ h.quantity|qty }} {{ h.planting.unit }}{% if h.grade %} · {{ h.grade }}{% endif %} <span class="small muted">{{ h.harvested_on|date:"d M" }}</span></span><a class="btn small" href="{% url 'marketplace:my_listings' %}?harvest={{ h.pk }}#add-produce">List for sale</a></li>{% empty %}<li class="muted">All harvests are listed.</li>{% endfor %}</ul></div>
+  <div class="card"><h2>Withdrawal periods</h2><ul class="list-plain">{% for t in in_withdrawal %}<li><span class="badge danger">until {{ t.withdrawal_ends|date:"d M Y" }}</span> <a href="{% url 'farm:herd' t.herd.pk %}">{{ t.herd.name }}</a> · {{ t.remedy }}</li>{% empty %}<li class="muted">No herd is under withdrawal. All livestock can be sold.</li>{% endfor %}</ul></div>
+  <div class="card"><h2>Recent costs</h2><ul class="list-plain small">{% for c in recent_costs %}<li class="row between"><span>{{ c.get_category_display }} · {% if c.planting %}{{ c.planting.commodity }}{% else %}{{ c.herd.name }}{% endif %}{% if c.description %} <span class="muted">{{ c.description }}</span>{% endif %}</span><strong>{{ c.amount|rand }}</strong></li>{% empty %}<li class="muted">No costs recorded yet. Record costs to see your profit per crop and herd.</li>{% endfor %}</ul></div>
+</div>
+<div class="card"><h2>Current crops</h2><div class="table-wrap"><table class="data"><thead><tr><th>Crop</th><th>Field</th><th>Planted</th><th class="num">Area</th><th>Expected harvest</th><th>Status</th></tr></thead>
+<tbody>{% for p in current %}<tr><td><a href="{% url 'farm:planting' p.pk %}">{{ p.commodity }}</a>{% if p.cultivar %}<div class="small muted">{{ p.cultivar }}</div>{% endif %}</td><td>{{ p.field.name }}</td><td>{{ p.planted_on|date:"d M Y" }}</td><td class="num">{{ p.area_ha }} ha</td><td>{{ p.expected_harvest|date:"d M Y" }}</td><td><span class="badge">{{ p.get_status_display }}</span></td></tr>
+{% empty %}<tr><td colspan="6" class="empty">No crops recorded. <a href="{% url 'farm:plantings' %}">Record a planting</a>.</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

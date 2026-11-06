@@ -1,0 +1,12 @@
+{% with v=request.resolver_match.view_name %}<div class="tabs no-print">
+  <a href="{% url 'farm:home' %}" class="{% if v == 'farm:home' %}on{% endif %}">Overview</a>
+  <a href="{% url 'farm:fields' %}" class="{% if v == 'farm:fields' %}on{% endif %}">Fields</a>
+  <a href="{% url 'farm:plantings' %}" class="{% if v == 'farm:plantings' or v == 'farm:planting' %}on{% endif %}">Crops</a>
+  <a href="{% url 'farm:harvests' %}" class="{% if v == 'farm:harvests' %}on{% endif %}">Harvest</a>
+  <a href="{% url 'farm:herds' %}" class="{% if v == 'farm:herds' or v == 'farm:herd' %}on{% endif %}">Livestock</a>
+  <a href="{% url 'farm:treatments' %}" class="{% if v == 'farm:treatments' %}on{% endif %}">Treatment register</a>
+  <a href="{% url 'farm:costs' %}" class="{% if v == 'farm:costs' %}on{% endif %}">Costs</a>
+  <a href="{% url 'advisory:home' %}" class="{% if v == 'advisory:home' %}on{% endif %}">Advice</a>
+  <a href="{% url 'insights:planner' %}" class="{% if v == 'insights:planner' %}on{% endif %}">Plan next crop</a>
+  <a href="{% url 'insights:farm' %}">Profit &amp; analytics →</a>
+</div>{% endwith %}

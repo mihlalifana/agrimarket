@@ -1,0 +1,15 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Production costs{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Production costs</h1><p>Record what each crop and herd costs, so you can see which ones make money.</p></div></div>
+{% include "farm/_nav.html" %}
+<div class="split">
+  <div class="stack">
+    <div class="grid grid-3">{% for label, t in by_cat|slice:":6" %}<div class="card stat"><div class="label">{{ label }}</div><div class="value">{{ t|rand }}</div></div>{% endfor %}</div>
+    <div class="card table-wrap"><table class="data"><thead><tr><th>Date</th><th>For</th><th>Category</th><th>Description</th><th class="num">Amount</th><th></th></tr></thead>
+    <tbody>{% for c in rows %}<tr><td class="nowrap">{{ c.incurred_on|date:"d M Y" }}</td><td>{% if c.planting %}<a href="{% url 'farm:planting' c.planting.pk %}">{{ c.planting.commodity }} – {{ c.planting.field.name }}</a>{% else %}<a href="{% url 'farm:herd' c.herd.pk %}">{{ c.herd.name }}</a>{% endif %}</td><td>{{ c.get_category_display }}</td><td>{{ c.description }}</td><td class="num">{{ c.amount|rand }}</td>
+    <td><form method="post" action="{% url 'farm:cost_delete' c.pk %}">{% csrf_token %}<button class="linkbtn muted" aria-label="Remove">✕</button></form></td></tr>{% empty %}<tr><td colspan="6" class="empty">No costs yet.</td></tr>{% endfor %}</tbody>
+    <tfoot><tr><td colspan="4">Total</td><td class="num">{{ total|rand }}</td><td></td></tr></tfoot></table></div>
+  </div>
+  <form method="post" class="card" novalidate>{% csrf_token %}<h2>Add a cost</h2>{% include "includes/form.html" %}<button class="btn block">Save cost</button></form>
+</div>
+{% endblock %}

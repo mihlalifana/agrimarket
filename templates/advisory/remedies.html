@@ -1,0 +1,38 @@
+{% extends "base.html" %}{% block title %}Remedy catalogue{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Remedy catalogue</h1><p>Agricultural remedies registered under Act 36 of 1947. Only <strong>verified</strong> products can be chosen when a spray is recorded, and the pre-harvest interval for each crop is taken from here. Check every entry against the product label or the Registrar's list before you verify it.</p></div></div>
+<div class="tabs">{% for v, l, n in statuses %}<a href="?status={{ v }}" class="{% if v == status %}on{% endif %}">{{ l }} ({{ n }})</a>{% endfor %}</div>
+<div class="split">
+  <div class="stack">{% for r in rows %}
+    <div class="card" data-id="{{ r.pk }}"><div class="row between"><h2 style="margin:0">{{ r.trade_name }} <span class="muted">{{ r.registration_no }}</span></h2><span class="badge s-{{ r.status }}">{{ r.get_status_display }}</span></div>
+      <dl class="facts small" style="margin-top:8px">
+        <dt>Active ingredient</dt><dd>{{ r.active_ingredient }}</dd>
+        <dt>Holder</dt><dd>{{ r.holder|default:"—" }}</dd>
+        <dt>Source checked</dt><dd>{{ r.source }}{% if r.label_photo %} · <a href="{{ r.label_photo.url }}" target="_blank" rel="noopener">label photo</a>{% endif %}</dd>
+        <dt>Sent by</dt><dd>{{ r.submitted_by.get_full_name|default:"—" }} · {{ r.created_at|date:"d M Y" }}</dd>
+        {% if r.verified_at %}<dt>Verified</dt><dd>{{ r.verified_at|date:"d M Y" }} by {{ r.verified_by.get_full_name|default:"admin" }}</dd>{% endif %}
+        {% if r.note %}<dt>Reason</dt><dd>{{ r.note }}</dd>{% endif %}
+      </dl>
+      <div class="table-wrap"><table class="data small"><thead><tr><th>Crop on the label</th><th class="num">Pre-harvest interval</th><th>Label rate</th><th>Pests / diseases</th><th></th></tr></thead>
+      <tbody>{% for u in r.uses.all %}<tr><td>{{ u.commodity }}</td><td class="num"><strong>{{ u.phi_days }} days</strong></td><td>{{ u.max_rate|default:"—" }}</td><td>{{ u.targets|default:"—" }}</td>
+        <td><form method="post" action="{% url 'advisory:remedy_action' r.pk %}" class="inline-form">{% csrf_token %}<input type="hidden" name="use" value="{{ u.pk }}"><button class="linkbtn small" name="action" value="remove_use">Remove</button></form></td></tr>
+      {% empty %}<tr><td colspan="5" class="empty">No crops yet. Add each crop and its waiting period from the label.</td></tr>{% endfor %}</tbody></table></div>
+      <details class="panel"><summary>Add a crop from the label</summary>
+        <form method="post" action="{% url 'advisory:remedy_action' r.pk %}" class="form-grid" novalidate>{% csrf_token %}{% with form=add_use_form %}{% include "includes/form.html" %}{% endwith %}<div class="full"><button class="btn secondary" name="action" value="add_use">Add crop</button></div></form></details>
+      <form method="post" action="{% url 'advisory:remedy_action' r.pk %}" class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">{% csrf_token %}
+        {% if r.status != "verified" %}<button class="btn" name="action" value="verify">Verify — I checked the label</button>{% endif %}
+        <input class="input" name="note" placeholder="Reason (for reject or withdraw)" style="flex:1;min-width:180px">
+        {% if r.status == "pending" %}<button class="btn secondary" name="action" value="reject">Reject</button>{% endif %}
+        {% if r.status == "verified" %}<button class="btn danger" name="action" value="withdraw">Withdraw</button>{% endif %}
+      </form>
+    </div>
+  {% empty %}<div class="card empty">No products with this status.</div>{% endfor %}</div>
+  <aside class="stack">
+    <form method="post" enctype="multipart/form-data" class="card" novalidate>{% csrf_token %}<h2>Add a product</h2>
+      <p class="small muted">Copy the details from the label. It starts as "Waiting for verification".</p>
+      {% include "includes/form.html" %}<h3>First crop on the label</h3>{% with form=use_form %}{% include "includes/form.html" %}{% endwith %}
+      <button class="btn block">Add product</button></form>
+    <div class="card small"><h3>Loading the full register</h3><p>To load many products at once from a spreadsheet of the Registrar's list, save it as CSV and run <code>python manage.py import_remedies file.csv</code>. Imported products also wait for verification.</p></div>
+  </aside>
+</div>
+{% endblock %}

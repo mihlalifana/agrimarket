@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% block title %}Log in{% endblock %}
+{% block content %}
+<div class="auth-box card">
+  <h1>Log in</h1>
+  <form method="post" novalidate>{% csrf_token %}{% include "includes/form.html" %}
+    <button class="btn block">Log in</button>
+  </form>
+  <hr>
+  <p class="small"><a href="{% url 'accounts:password_reset' %}">Forgot your password?</a> · <a href="{% url 'accounts:register' %}">Create an account</a></p>
+</div>
+{% endblock %}

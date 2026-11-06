@@ -1,0 +1,21 @@
+{% load agri %}{% with b=order.buyer pay=order.payment %}
+<div class="card"><h2>Order details</h2>
+<div class="grid grid-3">
+  <dl class="facts">
+    <dt>Order number</dt><dd><strong>{{ order.number }}</strong></dd>
+    <dt>Order date</dt><dd>{{ order.order_date|date:"l, d F Y" }}<br><span class="small muted">at {{ order.created_at|date:"H:i" }}</span></dd>
+    {% if order.quote %}<dt>From quote</dt><dd><a href="{% url 'orders:rfq_detail' order.quote.request_id %}">{{ order.quote.request.number }}</a></dd>{% endif %}
+  </dl>
+  <dl class="facts">
+    <dt>Ordered by</dt><dd><strong>{{ b.get_full_name }}</strong>{% if b.get_buyer_type_display %}<br><span class="small muted">{{ b.get_buyer_type_display }}</span>{% endif %}</dd>
+    <dt>Contact</dt><dd>{{ b.phone }}<br><span class="small">{{ b.email }}</span></dd>
+    <dt>{% if order.delivery_method == "delivery" %}Deliver to{% else %}Collection{% endif %}</dt><dd>{% if order.delivery_method == "delivery" %}{{ order.delivery_address|linebreaksbr }}<br>{{ order.get_delivery_province_display }}{% else %}Buyer collects from the farm{% endif %}</dd>
+  </dl>
+  {% if not user.is_distributor %}<dl class="facts">
+    <dt>Payment</dt><dd>{{ order.get_payment_method_display }} · <span class="badge {{ pay.badge }}">{{ pay.status_label }}</span></dd>
+    {% if pay.card_last4 %}<dt>Card</dt><dd>{{ pay.card_brand }} •••• {{ pay.card_last4 }}</dd>{% endif %}
+    {% if pay.online %}<dt>Card</dt><dd>{% if pay.status == "paid" %}Paid on {{ pay.gateway_name }}{% else %}{{ pay.gateway_name }} (not paid yet){% endif %}{% if pay.reference %}<br><span class="small muted">{{ pay.gateway_name }} ref {{ pay.reference }}</span>{% endif %}</dd>{% endif %}
+    {% if pay.confirmed_at %}<dt>Paid on</dt><dd>{{ pay.confirmed_at|date:"d M Y H:i" }}</dd>{% endif %}
+    <dt>Amounts</dt><dd>Goods {{ order.goods_total|rand }}<br>VAT {{ order.vat_total|rand }}<br>Delivery {{ order.delivery_total|rand }}<br><strong>Total {{ order.grand_total|rand }}</strong></dd>
+  </dl>{% endif %}
+</div></div>{% endwith %}

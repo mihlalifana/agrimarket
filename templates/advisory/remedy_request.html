@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% block title %}Spray products{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Spray products</h1><p>Sprays can only be recorded with a product from the verified list. The registration number and the pre-harvest interval for each crop come from the label, so they are never typed in by hand.</p></div></div>
+<div class="split">
+  <div class="stack">
+    <div class="card"><h2>Verified products</h2><div class="table-wrap"><table class="data small"><thead><tr><th>Product</th><th>Crops and pre-harvest interval</th></tr></thead>
+    <tbody>{% for r in verified %}<tr><td><strong>{{ r.trade_name }}</strong> <span class="muted">{{ r.registration_no }}</span><div class="muted">{{ r.active_ingredient }}</div></td>
+      <td>{% for u in r.uses.all %}{{ u.commodity }}: {{ u.phi_days }} days{% if not forloop.last %} · {% endif %}{% endfor %}</td></tr>
+    {% empty %}<tr><td colspan="2" class="empty">No verified products yet.</td></tr>{% endfor %}</tbody></table></div></div>
+    {% if mine %}<div class="card"><h2>Products I sent</h2><ul class="list-plain small">{% for r in mine %}<li><span class="badge s-{{ r.status }}">{{ r.get_status_display }}</span> {{ r }}{% for u in r.uses.all %} · {{ u.commodity }} {{ u.phi_days }} d{% endfor %}{% if r.note %} <span class="muted">— {{ r.note }}</span>{% endif %}</li>{% endfor %}</ul></div>{% endif %}
+  </div>
+  <form method="post" enctype="multipart/form-data" class="card" novalidate>{% csrf_token %}<h2>Send a product for verification</h2>
+    <p class="small muted">The administrator checks it against the label photo. Until then it can't be used.</p>
+    {% include "includes/form.html" %}<h3>Crop on the label</h3>{% with form=use_form %}{% include "includes/form.html" %}{% endwith %}
+    <button class="btn block">Send for verification</button></form>
+</div>
+{% endblock %}

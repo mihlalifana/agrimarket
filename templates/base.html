@@ -1,0 +1,87 @@
+{% load static agri %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}AgriMarket{% endblock %} · AgriMarket</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="{% url 'marketplace:catalog' %}"><span class="brand-mark">A</span> AgriMarket</a>
+    <details class="menu-toggle"><summary aria-label="Menu">☰ Menu</summary></details>
+    <nav class="nav" aria-label="Main">
+      {% with p=request.path %}
+      {% if user.is_authenticated %}
+        <a href="{% url 'core:dashboard' %}" class="{% if p == '/dashboard/' %}on{% endif %}">Dashboard</a>
+        {% if user.is_buyer %}
+          <a href="{% url 'marketplace:catalog' %}" class="{% if p == '/' %}on{% endif %}">Marketplace</a>
+          <a href="{% url 'orders:my_orders' %}" class="{% if '/orders/' in p and 'quotes' not in p %}on{% endif %}">My orders</a>
+          <a href="{% url 'orders:rfq_list' %}" class="{% if 'quotes' in p %}on{% endif %}">Quotes</a>
+          <a href="{% url 'marketplace:cart' %}" class="{% if p == '/cart/' %}on{% endif %}">Cart{% if cart_count %}<span class="pill-count">{{ cart_count }}</span>{% endif %}</a>
+          <details class="more"><summary>More ▾</summary><div class="more-menu">
+            <a href="{% url 'marketplace:alerts' %}">Availability alerts</a>
+            <a href="{% url 'marketplace:favourites' %}">Favourite farms</a></div></details>
+        {% elif user.is_farmer %}
+          <a href="{% url 'farm:home' %}" class="{% if '/farm/' in p %}on{% endif %}">Farm records</a>
+          <a href="{% url 'marketplace:my_listings' %}" class="{% if '/farmer/listings' in p %}on{% endif %}">My stock</a>
+          <a href="{% url 'orders:farmer_orders' %}" class="{% if '/orders/' in p and 'disputes' not in p %}on{% endif %}">Orders</a>
+          <a href="{% url 'orders:dispute_list' %}" class="{% if 'disputes' in p %}on{% endif %}">Complaints</a>
+          <a href="{% url 'insights:farm' %}" class="{% if '/insights/' in p %}on{% endif %}">Analytics</a>
+          <details class="more"><summary>More ▾</summary><div class="more-menu">
+            <a href="{% url 'insights:planner' %}">Planting planner</a>
+            <a href="{% url 'advisory:home' %}">Agronomist advice</a>
+            <a href="{% url 'advisory:alerts' %}">Pest alerts</a>
+            <a href="{% url 'advisory:remedy_request' %}">Spray products</a>
+            <a href="{% url 'orders:rfq_list' %}">Quote requests</a>
+            <a href="{% url 'orders:register' %}">Sales register</a>
+            <a href="{% url 'finance:earnings' %}">Earnings</a>
+            <a href="{% url 'finance:reports' %}">Reports</a>
+            <a href="{% url 'marketplace:catalog' %}">Marketplace</a></div></details>
+        {% elif user.is_agronomist %}
+          <a href="{% url 'advisory:alerts' %}" class="{% if 'alerts' in p %}on{% endif %}">Pest alerts</a>
+          <a href="{% url 'advisory:remedy_request' %}" class="{% if 'remedies' in p %}on{% endif %}">Spray products</a>
+        {% elif user.is_distributor %}
+          <a href="{% url 'orders:distributor_jobs' %}" class="{% if '/orders/' in p %}on{% endif %}">My deliveries</a>
+          <a href="{% url 'marketplace:catalog' %}">Marketplace</a>
+        {% endif %}
+        {% if user.is_admin_role %}
+          <a href="{% url 'accounts:farmer_queue' %}" class="{% if 'farmers' in p %}on{% endif %}">Farmers</a>
+          <a href="{% url 'advisory:agronomist_queue' %}" class="{% if 'agronomists' in p %}on{% endif %}">Agronomists</a>
+          <a href="{% url 'advisory:remedies' %}" class="{% if 'remedies' in p %}on{% endif %}">Remedies</a>
+          <a href="{% url 'accounts:user_list' %}" class="{% if 'users' in p %}on{% endif %}">Users</a>
+          <a href="{% url 'core:settings' %}" class="{% if 'settings' in p %}on{% endif %}">Settings</a>
+          <a href="{% url 'finance:income' %}" class="{% if 'income' in p %}on{% endif %}">Income</a>
+          <a href="{% url 'core:audit_log' %}" class="{% if 'audit' in p %}on{% endif %}">Audit log</a>
+        {% endif %}
+      {% else %}
+        <a href="{% url 'marketplace:catalog' %}" class="{% if p == '/' %}on{% endif %}">Marketplace</a>
+      {% endif %}
+      {% endwith %}
+    </nav>
+    <div class="userbox">
+      {% if user.is_authenticated %}
+        <a href="{% url 'core:notifications' %}" title="Notifications">🔔{% if unread_count %}<span class="pill-count">{{ unread_count }}</span>{% endif %}</a>
+        <a href="{% url 'accounts:profile' %}">{{ user.first_name|default:user.email }}</a>
+        <span class="role-tag">{{ user.get_role_display }}</span>
+        <form method="post" action="{% url 'accounts:logout' %}" class="inline-form">{% csrf_token %}<button class="linkbtn">Log out</button></form>
+      {% else %}
+        <a href="{% url 'accounts:login' %}">Log in</a>
+        <a class="btn wheat small" href="{% url 'accounts:register' %}">Register</a>
+      {% endif %}
+    </div>
+  </div>
+</header>
+<main>
+  {% if messages %}<ul class="messages">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}
+  {% block content %}{% endblock %}
+</main>
+<footer>AgriMarket · Farm-to-buyer marketplace · Prices in ZAR · <a href="{% url 'marketplace:catalog' %}">Browse stock</a></footer>
+<script src="{% static 'js/app.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,48 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Reports{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{% if farmer %}My sales reports{% else %}Reports{% endif %}</h1><p>{{ start|date:"d M Y" }} – {{ end|date:"d M Y" }}</p></div>
+  <div class="row no-print"><a class="btn secondary" href="?{% qs export='csv' %}">Export CSV</a><button class="btn secondary" onclick="window.print()">Print / PDF</button></div></div>
+<div class="tabs no-print">
+  <a href="?{% qs report='sales' %}" class="{% if report == 'sales' %}on{% endif %}">Sales</a>
+  <a href="?{% qs report='best' %}" class="{% if report == 'best' %}on{% endif %}">Best sellers</a>
+  <a href="?{% qs report='wastage' %}" class="{% if report == 'wastage' %}on{% endif %}">Wastage</a>
+</div>
+<form method="get" class="card inline-fields no-print">
+  <input type="hidden" name="report" value="{{ report }}">
+  {% if form.non_field_errors %}<div class="nonfield">{{ form.non_field_errors }}</div>{% endif %}
+  <label class="small">From {{ form.start }}</label><label class="small">To {{ form.end }}</label>
+  {% if report == "sales" %}<label class="small">Group {{ form.group }}</label>{% endif %}
+  {% if report == "best" %}<select class="input" name="by"><option value="revenue" {% if by == 'revenue' %}selected{% endif %}>By revenue</option><option value="quantity" {% if by == 'quantity' %}selected{% endif %}>By quantity</option></select>{% endif %}
+  <button class="btn">Run report</button>
+</form><br>
+
+{% if report == "sales" %}
+<div class="grid grid-4">
+  <div class="card stat"><div class="label">Orders</div><div class="value">{{ totals.orders }}</div></div>
+  <div class="card stat"><div class="label">Goods</div><div class="value">{{ totals.goods|rand }}</div></div>
+  <div class="card stat"><div class="label">VAT</div><div class="value">{{ totals.vat|rand }}</div></div>
+  <div class="card stat"><div class="label">Total incl. delivery</div><div class="value">{{ totals.total|rand }}</div></div>
+</div><br>
+<div class="card table-wrap"><table class="data"><thead><tr><th>{% if group == 'month' %}Month{% else %}Day{% endif %}</th><th class="num">Orders</th><th class="num">Goods</th><th class="num">VAT</th><th class="num">Delivery</th><th class="num">Total</th></tr></thead>
+<tbody>{% for r in rows %}<tr><td>{% if group == 'month' %}{{ r.period|date:"F Y" }}{% else %}{{ r.period|date:"D d M Y" }}{% endif %}</td><td class="num">{{ r.orders }}</td><td class="num">{{ r.goods|rand }}</td><td class="num">{{ r.vat|rand }}</td><td class="num">{{ r.delivery|rand }}</td><td class="num">{{ r.total|rand }}</td></tr>
+{% empty %}<tr><td colspan="6" class="empty">No sales in this period.</td></tr>{% endfor %}</tbody>
+{% if rows %}<tfoot><tr><td>Total</td><td class="num">{{ totals.orders }}</td><td class="num">{{ totals.goods|rand }}</td><td class="num">{{ totals.vat|rand }}</td><td class="num">{{ totals.delivery|rand }}</td><td class="num">{{ totals.total|rand }}</td></tr></tfoot>{% endif %}</table>
+<p class="small muted">Cancelled orders are excluded. Orders are counted on the day they were placed.</p></div>
+
+{% elif report == "best" %}
+<div class="card table-wrap"><table class="data"><thead><tr><th>#</th><th>Product</th><th class="num">Quantity sold</th><th class="num">Revenue (excl. VAT)</th><th class="num">Orders</th></tr></thead>
+<tbody>{% for r in rows %}<tr><td>{{ forloop.counter }}</td><td>{{ r.product_name }}</td><td class="num">{{ r.quantity|qty }} {{ r.unit }}</td><td class="num">{{ r.revenue|rand }}</td><td class="num">{{ r.orders }}</td></tr>
+{% empty %}<tr><td colspan="5" class="empty">No sales in this period.</td></tr>{% endfor %}</tbody></table></div>
+
+{% elif report == "wastage" %}
+<div class="grid grid-3">
+  <div class="card stat alert"><div class="label">Value lost</div><div class="value">{{ total|rand }}</div><div class="sub">{{ rows|length }} write-off{{ rows|length|pluralize }}</div></div>
+  {% for reason, value in by_reason.items %}<div class="card stat"><div class="label">{{ reason }}</div><div class="value">{{ value|rand }}</div></div>{% endfor %}
+</div><br>
+<div class="card table-wrap"><table class="data"><thead><tr><th>Date</th>{% if not farmer %}<th>Farm</th>{% endif %}<th>Batch</th><th>Product</th><th class="num">Quantity</th><th>Reason</th><th class="num">Value lost</th></tr></thead>
+<tbody>{% for a in rows %}<tr><td>{{ a.created_at|date:"d M Y" }}</td>{% if not farmer %}<td>{{ a.listing.farmer.farm.farm_name }}</td>{% endif %}<td><code>{{ a.listing.batch_number }}</code></td><td>{{ a.listing.name }}</td><td class="num">{{ a.quantity_change|qty|slice:"1:" }} {{ a.listing.unit }}</td><td>{{ a.get_reason_display }}{% if a.note %}<div class="small muted">{{ a.note }}</div>{% endif %}</td><td class="num">{{ a.value_lost|rand }}</td></tr>
+{% empty %}<tr><td colspan="7" class="empty">No losses recorded in this period.</td></tr>{% endfor %}</tbody></table>
+<p class="small muted">Value = quantity × listed price at the time of the write-off. Expired batches are written off automatically by the daily job.</p></div>
+
+{% endif %}
+{% endblock %}

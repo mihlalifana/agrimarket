@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Farm dashboard{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ farm.farm_name|default:"My farm" }}</h1><p>{{ today|date:"l, d F Y" }}</p></div>
+  {% if user.is_verified_farmer %}<div class="row"><a class="btn" href="{% url 'marketplace:my_listings' %}#add-produce">+ Produce</a><a class="btn wheat" href="{% url 'marketplace:my_listings' %}#add-livestock">+ Livestock</a></div>{% endif %}</div>
+{% for d in open_disputes %}<div class="messages"><li class="error">Complaint on {{ d.suborder.order.number }}: "{{ d.reason|truncatechars:90 }}" <a href="{% url 'orders:dispute_detail' d.pk %}">Answer it</a></li></div>{% endfor %}
+{% if farm.status == "approved" and gateway == "paystack" and not farm.paid_direct %}<div class="notice">{% if farm.bank_code and farm.bank_account %}Your bank details are saved ({{ farm.bank_name|default:farm.bank_code }}, account ending {{ farm.bank_account|slice:"-4:" }}), but Paystack has not set up your payout account yet{% if farm.payout_account_note %}: {{ farm.payout_account_note }}{% else %}.{% endif %} You don't need to enter them again; the administrator sets it up from Settings once the Paystack key is saved.{% else %}Add your bank account on <a href="{% url 'accounts:profile' %}">My profile</a> so buyers can pay you by card. Until then your stock can't be bought.{% endif %}</div><br>{% endif %}
+{% if farm.status == "pending" %}<div class="notice">Your farm is waiting for verification. You will be notified when you can start listing stock.</div><br>
+{% elif farm.status == "rejected" %}<ul class="messages"><li class="error">Verification rejected: {{ farm.rejection_reason }}</li></ul>{% endif %}
+<div class="grid grid-2" style="margin-bottom:16px">
+  <a class="card" style="text-decoration:none;color:inherit" href="{% url 'farm:home' %}"><h3>Farm records →</h3><p class="small muted">Fields, crops, harvests, livestock treatments and costs.</p></a>
+  <a class="card" style="text-decoration:none;color:inherit" href="{% url 'insights:farm' %}"><h3>My analytics →</h3><p class="small muted">Profit per crop and herd, sales trends, my prices vs the market.</p></a>
+</div>
+<div class="grid grid-4">
+  <div class="card stat"><div class="label">Sales this month</div><div class="value">{{ totals.goods|rand }}</div><div class="sub">{{ totals.orders }} order{{ totals.orders|pluralize }}</div></div>
+  <div class="card stat {% if to_pack %}alert{% endif %}"><div class="label">Orders to pack</div><div class="value">{{ to_pack|length }}</div><div class="sub"><a href="{% url 'orders:farmer_orders' %}?status=approved">View orders</a>{% if awaiting_pay %} · {{ awaiting_pay }} awaiting card payment{% endif %}</div></div>
+  <div class="card stat"><div class="label">Active listings</div><div class="value">{{ active_count }}</div><div class="sub"><a href="{% url 'marketplace:my_listings' %}">Manage stock</a></div></div>
+  <div class="card stat {% if low or near %}alert{% endif %}"><div class="label">Stock alerts</div><div class="value">{{ low|length|add:near|length }}</div><div class="sub">{{ low|length }} low · {{ near|length }} expiring</div></div>
+</div><br>
+<div class="grid grid-2">
+  <div class="card"><h2>Paid orders to pack</h2><ul class="list-plain">{% for s in to_pack %}<li class="row between"><span><a href="{% url 'orders:suborder' s.pk %}">{{ s.order.number }}</a> <span class="small muted">{{ s.order.order_date|date:"d M" }} · {{ s.order.get_delivery_method_display }}</span></span><strong>{{ s.total|rand }}</strong></li>{% empty %}<li class="muted">Nothing to pack.</li>{% endfor %}</ul></div>
+  <div class="card"><h2>Stock alerts</h2><ul class="list-plain">
+    {% for l in near %}<li><span class="badge danger">Expires {{ l.expiry_date|date:"d M" }}</span> <a href="{% url 'marketplace:listing_edit' l.pk %}">{{ l.name }}</a> · {{ l.qty_display }}</li>{% endfor %}
+    {% for l in low %}<li><span class="badge wheat">Low</span> <a href="{% url 'marketplace:listing_edit' l.pk %}">{{ l.name }}</a> · {{ l.qty_display }} left</li>{% endfor %}
+    {% if not near and not low %}<li class="muted">All stock levels are fine.</li>{% endif %}</ul></div>
+</div>
+<div class="card"><h2>My sales per month</h2><div class="chart-box"><canvas id="monthly"></canvas></div></div>
+<div class="card"><h2>My best sellers this month</h2><table class="data"><tbody>{% for r in best %}<tr><td>{{ r.product_name }}</td><td class="num">{{ r.quantity|qty }} {{ r.unit }}</td><td class="num">{{ r.revenue|rand }}</td></tr>{% empty %}<tr><td class="empty">No sales yet this month.</td></tr>{% endfor %}</tbody></table></div>
+{{ chart|json_script:"chart-data" }}
+{% endblock %}
+{% block scripts %}{% include "core/charts.html" %}{% endblock %}

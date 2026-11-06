@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% block title %}Agronomist verification{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Agronomist verification</h1><p>Check each registration number with the professional body (SACNASP register or SASCP membership) before approving.</p></div></div>
+<div class="tabs">{% for v, l in statuses %}<a href="?status={{ v }}" class="{% if v == status %}on{% endif %}">{{ l }}</a>{% endfor %}</div>
+<div class="stack">{% for a in people %}
+<div class="card"><div class="row between"><h2 style="margin:0">{{ a.user.get_full_name }}</h2><span class="badge s-{{ a.status }}">{{ a.get_status_display }}</span></div>
+  <div class="split" style="margin-top:10px">
+    <dl class="facts small">
+      <dt>Registration</dt><dd>{{ a.get_body_display }} · <strong>{{ a.registration_no }}</strong></dd>
+      <dt>Qualification</dt><dd>{{ a.qualification }}</dd>
+      <dt>Company</dt><dd>{{ a.company|default:"—" }}</dd>
+      <dt>Crops</dt><dd>{{ a.crops|default:"—" }}</dd>
+      <dt>Contact</dt><dd>{{ a.user.phone }} · {{ a.user.email }} · {{ a.user.get_province_display }}</dd>
+      <dt>Registered</dt><dd>{{ a.user.date_joined|date:"d M Y" }}</dd>
+      {% if a.reviewed_at %}<dt>Last decision</dt><dd>{{ a.reviewed_at|date:"d M Y" }} by {{ a.reviewed_by.get_full_name }}{% if a.rejection_reason %} — {{ a.rejection_reason }}{% endif %}</dd>{% endif %}
+    </dl>
+    <form method="post" action="{% url 'advisory:agronomist_review' a.pk %}" class="stack" novalidate>{% csrf_token %}
+      <select name="decision" class="input"><option value="approve">Approve</option><option value="reject">Reject</option></select>
+      <input class="input" name="reason" placeholder="Reason (required when rejecting)"><button class="btn block">Save decision</button></form>
+  </div></div>
+{% empty %}<div class="card empty">Nothing here.</div>{% endfor %}</div>
+{% endblock %}

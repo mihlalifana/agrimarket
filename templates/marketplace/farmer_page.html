@@ -1,0 +1,7 @@
+{% extends "base.html" %}{% load agri %}{% block title %}{{ farmer.farm.farm_name }}{% endblock %}
+{% block content %}
+<div class="hero"><div><h1>{{ farmer.farm.farm_name }}</h1><p>{{ farmer.farm.town }}, {{ farmer.farm.get_province_display }} · Verified farm</p></div>
+  <div>{% if user.is_buyer %}<form method="post" action="{% url 'marketplace:toggle_favourite' farmer.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><button class="btn {% if is_fav %}wheat{% else %}secondary{% endif %}">{% if is_fav %}★ Following{% else %}☆ Follow this farm{% endif %}</button></form><br>{% endif %}<span class="small">{{ followers }} follower{{ followers|pluralize }}</span><br>{% if stats.avg %}<span class="stars" style="font-size:1.3rem">{{ stats.avg|stars }}</span> <span>{{ stats.avg|floatformat:1 }} from {{ stats.count }} review{{ stats.count|pluralize }}</span>{% else %}No reviews yet{% endif %}</div></div>
+<h2>{{ listings|length }} listing{{ listings|length|pluralize }} for sale</h2>
+<div class="products">{% for l in listings %}{% include "includes/product_card.html" %}{% empty %}<p class="muted">Nothing for sale right now.</p>{% endfor %}</div>
+{% endblock %}

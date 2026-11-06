@@ -1,0 +1,31 @@
+{% extends "base.html" %}{% load agri %}{% block title %}{{ p.commodity }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ p.commodity }}{% if p.cultivar %} <span class="muted">({{ p.cultivar }})</span>{% endif %}</h1>
+  <p>{{ p.field.name }} · {{ p.area_ha }} ha · season {{ p.season }} · planted {{ p.planted_on|date:"d M Y" }} · <span class="badge">{{ p.get_status_display }}</span></p></div></div>
+{% include "farm/_nav.html" %}
+<div class="split">
+  <div class="stack">
+    <div class="card"><h2>Harvests</h2>
+      <div class="table-wrap"><table class="data"><thead><tr><th>Date</th><th class="num">Quantity</th><th>Grade</th><th>For sale</th></tr></thead>
+      <tbody>{% for h in harvests %}<tr><td>{{ h.harvested_on|date:"d M Y" }}</td><td class="num">{{ h.quantity|qty }} {{ p.unit }}</td><td>{{ h.grade|default:"—" }}</td>
+        <td>{% if h.is_listed %}<a href="{% url 'marketplace:listing' h.listing.pk %}">{{ h.listing.batch_number }}</a> <span class="small muted">{{ h.listing.qty_display }} left</span>{% else %}<span class="small muted">Not listed</span>{% endif %}</td></tr>
+      {% empty %}<tr><td colspan="4" class="empty">No harvests recorded yet. Expected around {{ p.expected_harvest|date:"d M Y" }}: {{ p.expected_yield|qty }} {{ p.unit }}.</td></tr>{% endfor %}</tbody>
+      {% if harvests %}<tfoot><tr><td>Total</td><td class="num">{{ p.harvested_qty|qty }} {{ p.unit }}</td><td colspan="2" class="small muted">expected {{ p.expected_yield|qty }} {{ p.unit }}</td></tr></tfoot>{% endif %}</table></div>
+      {% if blocked %}<div class="notice small"><strong>Do not harvest yet:</strong> {{ blocked.product }} was sprayed on {{ blocked.applied_on|date:"d M" }}. Its pre-harvest interval ends on <strong>{{ blocked.safe_from|date:"d M Y" }}</strong>.</div>{% endif %}
+      {% if p.status == "growing" or p.status == "harvesting" %}<p class="small muted">{% if p.expected_harvest <= today %}This crop is due. Record harvests and list them for sale on the <a href="{% url 'farm:harvests' %}?crop={{ p.pk }}#record">Harvest page</a>.{% else %}Harvests are recorded on the Harvest page from the expected harvest date, {{ p.expected_harvest|date:"d M Y" }}.{% endif %}</p>{% endif %}
+    </div>
+    <div class="card"><h2>Sprays</h2>
+      <div class="table-wrap"><table class="data small"><thead><tr><th>Date</th><th>Product</th><th>Target</th><th>Rate</th><th>Harvest from</th></tr></thead>
+      <tbody>{% for s in sprays %}<tr><td>{{ s.applied_on|date:"d M Y" }}</td><td>{{ s.product }} <span class="muted">{{ s.registration_no }}</span><div class="muted">{{ s.active_ingredient }}{% if s.recommended_by %} · advised by {{ s.recommended_by.get_full_name }}{% endif %}</div></td><td>{{ s.target }}</td><td>{{ s.rate }}</td>
+      <td>{% if s.in_phi %}<span class="badge wheat">{{ s.safe_from|date:"d M" }}</span>{% else %}{{ s.safe_from|date:"d M" }}{% endif %}</td></tr>{% empty %}<tr><td colspan="5" class="empty">No sprays recorded on this crop.</td></tr>{% endfor %}</tbody></table></div>
+      <details class="panel"><summary>Record a spray</summary>
+        <form method="post" action="{% url 'advisory:spray_add' %}" novalidate>{% csrf_token %}<input type="hidden" name="planting_fixed" value="{{ p.pk }}"><input type="hidden" name="next" value="{{ request.path }}">{% include "advisory/_spray_fields.html" with form=spray_form %}<button class="btn">Save spray</button></form></details>
+    </div>
+    {% if recs %}<div class="card"><h2>Agronomist advice for this crop</h2><ul class="list-plain small">{% for r in recs %}<li><span class="badge {% if r.status == 'done' %}{% elif r.status == 'declined' %}grey{% else %}wheat{% endif %}">{{ r.get_status_display }}</span> <strong>{{ r.get_kind_display }}</strong> · {{ r.advice }} <span class="muted">— {{ r.agronomist.get_full_name }}, {{ r.created_at|date:"d M" }}</span></li>{% endfor %}</ul><a class="small" href="{% url 'advisory:home' %}">All advice</a></div>{% endif %}
+    {% if best_months %}<div class="card"><h3>Best time to sell {{ p.commodity }}</h3><p>Across the marketplace, prices have been highest in <strong>{{ best_months|join:", " }}</strong>.</p></div>{% endif %}
+    <details class="card"><summary><strong>Edit planting details</strong></summary><br>
+      <form method="post" novalidate>{% csrf_token %}{% with form=sform %}{% include "includes/form.html" %}{% endwith %}<button class="btn secondary" name="update" value="1">Save changes</button></form></details>
+  </div>
+  <aside class="stack">{% include "farm/_economics.html" with e=econ %}{% include "farm/_costs.html" %}</aside>
+</div>
+{% endblock %}

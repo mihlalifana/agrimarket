@@ -1,0 +1,51 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Planting planner{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>What should I plant next?</h1>
+  <p>For each field, the crops that would earn most if planted on the date you choose — worked out from your own records, the market and other farms' plans.</p></div></div>
+{% include "farm/_nav.html" %}
+<form method="get" class="card row" style="gap:12px;align-items:flex-end;flex-wrap:wrap">
+  <label>Planting from<input class="input" type="date" name="date" value="{{ day|date:'Y-m-d' }}" min="{{ today|date:'Y-m-d' }}" max="{{ max_day|date:'Y-m-d' }}"></label>
+  <button class="btn">Update plan</button>
+  <p class="small muted" style="margin:0;flex:1;min-width:240px">Each figure says where it comes from: <strong>your own</strong> past harvests and costs first, then the average of at least {{ min_farms }} farms, then a crop guide. The more you record under Farm records, the more the plan is about <em>your</em> farm.</p>
+</form>
+
+{% for plan in plans %}
+<div class="card planner-field">
+  <div class="row between" style="align-items:flex-start;flex-wrap:wrap;gap:8px">
+    <div><h2 style="margin:0">{{ plan.field.name }}</h2>
+      <p class="small muted" style="margin:2px 0 0">{{ plan.field.size_ha|qty }} ha · {% if plan.field.irrigated %}irrigated{% else %}dryland{% endif %}{% if plan.field.soil_type %} · {{ plan.field.soil_type }}{% endif %}
+      {% if plan.last %} · last crop: {{ plan.last.commodity }} ({{ plan.last.planted_on|date:"M Y" }}){% endif %}
+      {% if plan.soil %} · soil pH {{ plan.soil.ph_kcl }} ({{ plan.soil.sampled_on|date:"M Y" }}){% endif %}</p></div>
+    {% if plan.area < plan.field.size_ha %}<span class="badge wheat">{% if plan.area %}{{ plan.area|qty }} ha free on {{ day|date:"d M" }}{% else %}In use until {{ plan.busy_until|date:"d M Y" }}{% endif %}</span>{% endif %}
+  </div>
+  {% for r in plan.advice %}<div class="notice small" style="margin-top:8px"><strong>Your agronomist:</strong> {{ r.advice }}</div>{% endfor %}
+  {% if not plan.area %}
+    <p class="small" style="margin-top:10px">The whole field is planted on this date. <a href="?date={{ plan.busy_until|date:'Y-m-d' }}">Plan from {{ plan.busy_until|date:"d M Y" }}</a>.</p>
+  {% else %}
+  <div class="options">
+  {% for o in plan.top %}
+    <div class="option {% if forloop.first and o.fit == 'Good fit' %}best{% endif %}">
+      <div class="row between"><h3 style="margin:0">{{ forloop.counter }}. {{ o.commodity }}</h3>
+        <span class="badge {% if o.fit == 'Good fit' %}{% elif o.fit == 'Loses money' %}danger{% else %}wheat{% endif %}">{{ o.fit }}</span></div>
+      <div class="big {% if o.total < 0 %}neg{% endif %}">{{ o.total|rand }}<span class="small muted"> expected profit on {{ o.area|qty }} ha</span></div>
+      <dl class="facts small">
+        <dt>Ready</dt><dd>about {{ o.ready|date:"d M Y" }} ({{ o.days }} days)</dd>
+        <dt>Yield</dt><dd>{{ o.yield_ha|qty }} {{ o.unit }}/ha <span class="muted">· {{ o.y_src }}</span></dd>
+        <dt>Price</dt><dd>{{ o.price|rand }}/{{ o.unit }} <span class="muted">· {{ o.p_src }}</span></dd>
+        <dt>Costs</dt><dd>{{ o.cost_ha|rand }}/ha <span class="muted">· {{ o.c_src }}</span></dd>
+        <dt>Profit</dt><dd>{{ o.profit_ha|rand }}/ha{% if o.breakeven %} <span class="muted">· break-even at {{ o.breakeven|rand }}/{{ o.unit }}</span>{% endif %}</dd>
+      </dl>
+      {% for g in o.good %}<div class="small good">✓ {{ g }}</div>{% endfor %}
+      {% for n in o.notes %}<div class="small warn">! {{ n }}</div>{% endfor %}
+      <a class="btn small secondary" style="margin-top:8px" href="{% url 'farm:plantings' %}?field={{ plan.field.pk }}&commodity={{ o.commodity.pk }}&planted_on={{ day|date:'Y-m-d' }}&area_ha={{ o.area|floatformat:2 }}&expected_harvest={{ o.ready|date:'Y-m-d' }}&unit={{ o.unit }}&expected_yield={{ o.volume|floatformat:0 }}">Plan this crop</a>
+    </div>
+  {% empty %}<p class="muted">No suitable crops found.</p>{% endfor %}
+  </div>
+  {% if plan.rest %}<details class="small"><summary>Other crops ({{ plan.rest|length }})</summary>
+    <div class="table-wrap"><table class="data small"><thead><tr><th>Crop</th><th class="num">Profit / ha</th><th>Why lower</th></tr></thead><tbody>
+    {% for o in plan.rest %}<tr><td>{{ o.commodity }}</td><td class="num">{{ o.profit_ha|rand }}</td><td>{{ o.notes|join:" "|default:"Lower expected profit." }}</td></tr>{% endfor %}</tbody></table></div></details>{% endif %}
+  {% endif %}
+</div>
+{% empty %}<div class="card empty">Add your fields under <a href="{% url 'farm:fields' %}">Farm records → Fields</a> to get a plan.</div>{% endfor %}
+<p class="small muted">Guide figures are typical values for the summer-rainfall interior and are only used when there are no records to go on. Prices and other farms' plans change — check again before you buy inputs.</p>
+{% endblock %}

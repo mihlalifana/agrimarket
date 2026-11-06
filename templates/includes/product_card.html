@@ -1,0 +1,12 @@
+{% load agri %}
+<a class="product" href="{% url 'marketplace:listing' l.pk %}">
+  <div class="ph">{% with ph=l.photos.all|first %}{% if ph %}<img src="{{ ph.image.url }}" alt="{{ l.name }}" loading="lazy">{% else %}{{ l.name|first|upper }}{% endif %}{% endwith %}</div>
+  <div class="body">
+    <div class="row between"><span class="badge {% if l.is_livestock %}wheat{% endif %}">{{ l.category.name }}</span>{% if l.is_near_expiry %}<span class="badge danger">Expires soon</span>{% endif %}</div>
+    <div class="name">{{ l.name }}</div>
+    <div class="price">{{ l.current_price|rand }} <small>/ {{ l.unit }}</small></div>
+    <div class="meta">{{ l.qty_display }} available{% if l.grade %} · {{ l.grade }}{% endif %}</div>
+    <div class="foot"><span class="muted">{{ l.farmer.farm.farm_name }}, {{ l.farmer.farm.get_province_display }}</span>
+      {% if l.avg_rating %}<span class="stars" title="{{ l.avg_rating|floatformat:1 }} from {{ l.review_count }}">{{ l.avg_rating|stars }}</span>{% endif %}</div>
+  </div>
+</a>

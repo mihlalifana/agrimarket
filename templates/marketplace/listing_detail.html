@@ -1,0 +1,79 @@
+{% extends "base.html" %}{% load agri %}{% block title %}{{ listing.name }}{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'marketplace:catalog' %}">← Marketplace</a> / {{ listing.category.name }}</p>
+<div class="split">
+  <div class="stack">
+    <div class="gallery">
+      {% with photos=listing.photos.all %}
+      <div class="main">{% if photos %}<img src="{{ photos.0.image.url }}" alt="{{ listing.name }}" id="mainimg">{% else %}{{ listing.name|first|upper }}{% endif %}</div>
+      {% if photos|length > 1 %}<div class="thumbs">{% for p in photos %}<img src="{{ p.image.url }}" alt="Photo {{ forloop.counter }}" onclick="document.getElementById('mainimg').src=this.src">{% endfor %}</div>{% endif %}
+      {% endwith %}
+    </div>
+    <div class="card">
+      <h2>About this {% if listing.is_livestock %}lot{% else %}batch{% endif %}</h2>
+      <p>{{ listing.description|linebreaksbr|default:"No description given." }}</p>
+      <dl class="facts">
+        <dt>Batch number</dt><dd><code>{{ listing.batch_number }}</code></dd>
+        <dt>Product standard</dt><dd>{{ listing.commodity.name }} <span class="small muted">({{ listing.commodity.code }} · {{ listing.commodity.standard_reference }})</span></dd>
+        {% if listing.harvest %}<dt>Traceability</dt><dd>Harvested {{ listing.harvest.harvested_on|date:"d M Y" }} on {{ listing.harvest.planting.field.name }} ({{ listing.harvest.planting.season }} season{% if listing.harvest.planting.cultivar %}, {{ listing.harvest.planting.cultivar }}{% endif %})</dd>{% endif %}
+        {% if listing.herd %}<dt>Herd</dt><dd>{{ listing.herd.name }}{% if listing.herd.tag_range %} · tags {{ listing.herd.tag_range }}{% endif %}</dd>{% endif %}
+        {% if listing.is_livestock %}{% with ls=listing.livestock %}
+          <dt>Species / breed</dt><dd>{{ ls.species }}, {{ ls.breed }}</dd>
+          <dt>Sex</dt><dd>{{ ls.get_sex_display }}</dd>
+          <dt>Age</dt><dd>{{ ls.age_months }} months</dd>
+          <dt>Average weight</dt><dd>{{ ls.avg_weight_kg|qty }} kg</dd>
+          <dt>ID tag / brand</dt><dd>{{ ls.tag_or_brand }}</dd>
+          <dt>Vaccination</dt><dd>{{ ls.get_vaccination_status_display }}{% if ls.vaccination_notes %}<div class="small muted">{{ ls.vaccination_notes }}</div>{% endif %}</dd>
+        {% endwith %}{% else %}
+          <dt>Grade</dt><dd>{{ listing.get_grade_display }}</dd>
+          <dt>Harvested</dt><dd>{{ listing.harvest_date|date:"d M Y"|default:"—" }}</dd>
+          <dt>Best before</dt><dd>{{ listing.expiry_date|date:"d M Y"|default:"Not perishable" }}{% if listing.is_near_expiry %} <span class="badge danger">Expires soon</span>{% endif %}</dd>
+        {% endif %}
+        <dt>Minimum order</dt><dd>{{ listing.min_order_qty|qty }} {{ listing.unit }}</dd>
+      </dl>
+    </div>
+    {% if treatments %}<div class="card"><h2>Health and treatment record</h2>
+      <table class="data small"><thead><tr><th>Date</th><th>Treatment</th><th>Reg. no.</th><th>Withdrawal ends</th></tr></thead><tbody>{% for t in treatments %}<tr><td>{{ t.treated_on|date:"d M Y" }}</td><td>{{ t.get_kind_display }}: {{ t.remedy }}</td><td>{{ t.registration_no|default:"—" }}</td><td>{% if t.withdrawal_days %}{{ t.withdrawal_ends|date:"d M Y" }}{% else %}—{% endif %}</td></tr>{% endfor %}</tbody></table>
+      <p class="small muted">From the farm's treatment register. Animals cannot be sold while a withdrawal period is running.</p></div>{% endif %}
+    <div class="card">
+      <h2>Reviews {% if listing.avg_rating %}<span class="stars">{{ listing.avg_rating|stars }}</span> <span class="small muted">{{ listing.avg_rating|floatformat:1 }} from {{ listing.review_count }}</span>{% endif %}</h2>
+      {% for r in reviews %}<div class="list-plain"><li><span class="stars">{{ r.rating|stars }}</span> <strong>{{ r.buyer.first_name }}</strong> <span class="small muted">{{ r.created_at|date:"d M Y" }}</span>
+        {% if r.comment %}<div>{{ r.comment }}</div>{% endif %}
+        {% if user.is_admin_role %}<form method="post" action="{% url 'orders:hide_review' r.pk %}" class="inline-fields small">{% csrf_token %}<input class="input" name="reason" placeholder="Reason to hide"><button class="btn danger small">Hide</button></form>{% endif %}
+      </li></div>{% empty %}<p class="muted">No reviews yet.</p>{% endfor %}
+    </div>
+  </div>
+  <aside class="stack">
+    <div class="card">
+      <span class="badge {% if listing.is_livestock %}wheat{% endif %}">{{ listing.category.name }}</span>
+      <h1 style="margin-top:8px">{{ listing.name }}</h1>
+      <div class="stat" style="padding:0"><div class="value">{{ listing.current_price|rand }} <span class="small muted">per {{ listing.unit }}</span></div>
+        {% if listing.current_price != listing.price %}<div class="sub"><s>{{ listing.price|rand }}</s> near-expiry discount</div>{% endif %}</div>
+      <p><strong>{{ listing.qty_display }}</strong> available</p>
+      {% with tiers=listing.price_tiers.all %}{% if tiers %}<table class="data small"><thead><tr><th>Bulk quantity</th><th class="num">Price / {{ listing.unit }}</th></tr></thead>
+        <tbody><tr><td>{{ listing.min_order_qty|qty }}+</td><td class="num">{{ listing.price|rand }}</td></tr>{% for t in tiers %}<tr><td>{{ t.min_quantity|qty }}+</td><td class="num">{{ t.unit_price|rand }}</td></tr>{% endfor %}</tbody></table><br>{% endif %}{% endwith %}
+      {% if withdrawal_until %}<div class="notice">Under a treatment withdrawal period. Available from <strong>{{ withdrawal_until|date:"d M Y" }}</strong>.</div>
+        {% if user.is_buyer %}<br><a class="btn secondary block" href="{% url 'marketplace:alerts' %}?commodity={{ listing.commodity_id }}">Notify me when available</a>{% endif %}
+      {% elif sold_out %}<div class="notice">Sold out.</div>
+        {% if user.is_buyer %}<br><a class="btn block" href="{% url 'marketplace:alerts' %}?commodity={{ listing.commodity_id }}">Notify me when {{ listing.commodity.name|lower }} is available</a>
+        <a class="btn secondary block" style="margin-top:8px" href="{% url 'orders:rfq_create' %}?commodity={{ listing.commodity_id }}">Ask farms for a quote</a>{% endif %}
+      {% elif listing.status != "active" or listing.is_expired %}<div class="notice">This listing is not for sale.</div>
+      {% elif user.is_authenticated and user.is_buyer %}
+        <p class="small"><a href="{% url 'orders:rfq_create' %}?commodity={{ listing.commodity_id }}">Need a large quantity? Ask for quotes</a></p>
+        <form method="post" action="{% url 'marketplace:cart_add' listing.pk %}">{% csrf_token %}
+          <div class="field"><label for="id_quantity">Quantity ({{ listing.unit }})</label>
+            <input class="input" type="number" name="quantity" id="id_quantity" value="{{ form.quantity.value|qty }}" min="{{ listing.min_order_qty|qty }}" max="{{ listing.quantity_available|qty }}" step="{% if listing.is_livestock %}1{% else %}0.001{% endif %}" required></div>
+          <button class="btn block">Add to cart</button>
+        </form>
+      {% elif is_owner %}<a class="btn secondary block" href="{% url 'marketplace:listing_edit' listing.pk %}">Edit my listing</a>
+      {% elif not user.is_authenticated %}<a class="btn block" href="{% url 'accounts:login' %}?next={{ request.path }}">Log in to buy</a>{% endif %}
+    </div>
+    <div class="card"><h3>Sold by</h3>
+      {% if user.is_buyer %}<form method="post" action="{% url 'marketplace:toggle_favourite' listing.farmer.pk %}" style="float:right">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><button class="btn small {% if is_fav %}wheat{% else %}secondary{% endif %}">{% if is_fav %}★ Favourite{% else %}☆ Follow farm{% endif %}</button></form>{% endif %}
+      <p><a href="{% url 'marketplace:farmer_page' listing.farmer.pk %}"><strong>{{ listing.farmer.farm.farm_name }}</strong></a><br><span class="muted">{{ listing.farmer.farm.town }}, {{ listing.farmer.farm.get_province_display }}</span></p>
+      <p class="small muted">{% if listing.farmer.farm.is_vat_registered %}VAT registered — prices exclude 15% VAT.{% else %}Not VAT registered — no VAT is added.{% endif %}</p>
+    </div>
+    {% if siblings %}<div class="card"><h3>Other batches from this farm</h3><ul class="list-plain">{% for s in siblings %}<li><a href="{% url 'marketplace:listing' s.pk %}">{{ s.batch_number }}</a> · {{ s.qty_display }}{% if s.expiry_date %} · best before {{ s.expiry_date|date:"d M" }}{% endif %}</li>{% endfor %}</ul><p class="small muted">Listed earliest expiry first.</p></div>{% endif %}
+  </aside>
+</div>
+{% endblock %}

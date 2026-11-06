@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Order register{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Order register</h1><p>Every order line: who ordered what, from which farm, when, at what price, and where it is now.{% if user.is_farmer %} Showing your farm's sales only.{% endif %}</p></div>
+  <div class="row no-print"><a class="btn secondary" href="?{% qs export='csv' %}">Export CSV ({{ totals.n }} lines)</a><button class="btn secondary" onclick="window.print()">Print</button></div></div>
+<form method="get" class="card filter-bar no-print">
+  <div class="inline-fields">
+    <label class="small">From <input class="input" type="date" name="start" value="{{ f.start }}"></label>
+    <label class="small">To <input class="input" type="date" name="end" value="{{ f.end }}"></label>
+    <input class="input" name="q" value="{{ f.q }}" placeholder="Order no, batch, buyer name or email" style="min-width:240px">
+    <select class="input" name="buyer"><option value="">All buyers</option>{% for b in buyers %}<option value="{{ b.pk }}" {% if f.buyer == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.get_full_name }}</option>{% endfor %}</select>
+    <select class="input" name="buyer_type"><option value="">All buyer types</option>{% for v, l in buyer_types %}<option value="{{ v }}" {% if f.buyer_type == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+    {% if farms %}<select class="input" name="farm"><option value="">All farms</option>{% for u in farms %}<option value="{{ u.pk }}" {% if f.farm == u.pk|stringformat:"s" %}selected{% endif %}>{{ u.farm.farm_name }}</option>{% endfor %}</select>{% endif %}
+    <select class="input" name="product"><option value="">All products</option>{% for c in products %}<option value="{{ c.code }}" {% if f.product == c.code %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select>
+    <select class="input" name="status"><option value="">Any order status</option>{% for v, l in statuses %}<option value="{{ v }}" {% if f.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+    <select class="input" name="payment"><option value="">Any payment status</option>{% for v, l in payments %}<option value="{{ v }}" {% if f.payment == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+    <button class="btn">Filter</button> <a class="small" href="{% url 'orders:register' %}">Clear</a>
+  </div>
+</form><br>
+<div class="grid grid-3">
+  <div class="card stat"><div class="label">Orders</div><div class="value">{{ totals.orders }}</div></div>
+  <div class="card stat"><div class="label">Order lines</div><div class="value">{{ totals.n }}</div></div>
+  <div class="card stat"><div class="label">Goods value (excl. VAT)</div><div class="value">{{ totals.goods|default:0|rand }}</div></div>
+</div><br>
+<div class="card table-wrap"><table class="data small">
+<thead><tr><th>Order date</th><th>Order</th><th>Ordered by</th>{% if not user.is_farmer %}<th>From farm</th>{% endif %}<th>Product</th><th>Grade · batch</th><th class="num">Qty</th><th class="num">Unit price</th><th class="num">Amount</th><th>Delivery</th><th>Payment</th><th>Status</th></tr></thead>
+<tbody>{% for r in rows %}<tr>
+  <td class="nowrap">{{ r.when|date:"d M Y" }}<div class="muted">{{ r.time|date:"H:i" }}</div></td>
+  <td class="nowrap"><a href="{% if user.is_farmer %}{% url 'orders:suborder' r.sub.pk %}{% else %}{% url 'orders:order_detail' r.order.pk %}{% endif %}"><strong>{{ r.order.number }}</strong></a>{% if r.sub.invoice_number %}<div class="muted">{{ r.sub.invoice_number }}</div>{% endif %}</td>
+  <td>{{ r.buyer.get_full_name }}<div class="muted">{{ r.buyer.get_buyer_type_display|default:"Buyer" }} · {{ r.buyer.get_province_display }}</div></td>
+  {% if not user.is_farmer %}<td>{{ r.farm.farm_name }}<div class="muted">{{ r.farm.get_province_display }}</div></td>{% endif %}
+  <td>{{ r.it.product_name }}</td>
+  <td>{{ r.it.grade|default:"—" }}<div class="muted"><code>{{ r.it.batch_number }}</code></div></td>
+  <td class="num">{{ r.it.quantity|qty }} {{ r.it.unit }}</td>
+  <td class="num">{{ r.it.unit_price|rand }}</td>
+  <td class="num">{{ r.it.line_total|rand }}{% if r.vat %}<div class="muted">+ VAT {{ r.vat|rand }}</div>{% endif %}</td>
+  <td>{% if r.order.delivery_method == "delivery" %}To {{ r.order.get_delivery_province_display }}{% if r.sub.distributor %}<div class="muted">{{ r.sub.distributor.get_full_name }}</div>{% endif %}{% else %}Collection{% endif %}{% if r.sub.delivered_at %}<div class="muted">done {{ r.sub.delivered_at|date:"d M" }}</div>{% endif %}</td>
+  <td>{{ r.order.get_payment_method_display }}<div><span class="badge s-{{ r.pay.status }}">{{ r.pay.get_status_display }}</span></div></td>
+  <td><span class="badge s-{{ r.sub.status }}">{{ r.sub.get_status_display }}</span></td></tr>
+{% empty %}<tr><td colspan="12" class="empty">No order lines match these filters.</td></tr>{% endfor %}</tbody></table></div>
+{% include "includes/pagination.html" %}
+{% endblock %}

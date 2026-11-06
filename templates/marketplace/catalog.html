@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Marketplace{% endblock %}
+{% block content %}
+{% if not user.is_authenticated %}
+<div class="hero"><div><h1>Buy directly from South African farms</h1><p>Grain, vegetables, fruit, animal products and livestock from verified farmers.</p></div>
+  <div class="row"><a class="btn wheat" href="{% url 'accounts:register_buyer' %}">Start buying</a><a class="btn secondary" href="{% url 'accounts:register_farmer' %}">Sell your stock</a></div></div>
+{% endif %}
+<div class="sidebar-layout">
+  <form method="get" class="card filter-bar" aria-label="Filters">
+    <h3>Find stock</h3>
+    {% for field in form %}{% include "includes/field.html" %}{% endfor %}
+    <button class="btn block">Apply</button>
+    <p class="small right"><a href="{% url 'marketplace:catalog' %}">Clear filters</a></p>
+  </form>
+  <section>
+    <div class="row between"><h2>{{ page.paginator.count }} listing{{ page.paginator.count|pluralize }}</h2></div>
+    {% if page.object_list %}
+      <div class="products">{% for l in page %}{% include "includes/product_card.html" %}{% endfor %}</div>
+    {% else %}<div class="card empty">{% if waiting_for_payout %}No stock can be bought yet: the farms are still setting up card payments (their Paystack payout account). Their stock appears here as soon as that is done.{% if user.is_admin_role %} <a href="{% url 'core:settings' %}">Platform settings</a>{% endif %}{% else %}No results. Try a different search or clear the filters.{% endif %}
+      {% if user.is_buyer %}<p>{% if searched_commodity %}<a class="btn" href="{% url 'marketplace:alerts' %}?commodity={{ searched_commodity.pk }}{% if form.cleaned_data.province %}&province={{ form.cleaned_data.province }}{% endif %}">Notify me when {{ searched_commodity.name|lower }} is available</a>
+        <a class="btn secondary" href="{% url 'orders:rfq_create' %}?commodity={{ searched_commodity.pk }}">Ask farms for a quote</a>{% else %}<a class="btn" href="{% url 'marketplace:alerts' %}">Set up an availability alert</a>{% endif %}</p>{% endif %}</div>{% endif %}
+    {% include "includes/pagination.html" %}
+  </section>
+</div>
+{% endblock %}

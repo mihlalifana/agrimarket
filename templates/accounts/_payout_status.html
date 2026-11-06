@@ -1,0 +1,4 @@
+{% if gateway == "paystack" %}<div class="panel" style="margin-top:8px"><strong>Card payments</strong>
+  {% if farm.paid_direct %}<p class="small">Ready. Buyers' card payments are paid by Paystack straight into your bank account, less {{ commission_pct }}% commission, usually 1 to 2 business days after each payment.</p>
+  {% else %}<p class="small">{% if farm.payout_account_note %}{{ farm.payout_account_note }}{% elif farm.status != "approved" %}Set up after your farm is verified.{% else %}Add your bank and account number.{% endif %} Until this is ready, buyers can't pay for your stock, so it is not shown in the marketplace.</p>{% endif %}
+</div>{% endif %}

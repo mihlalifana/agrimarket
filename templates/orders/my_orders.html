@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% load agri %}{% block title %}My orders{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>My orders</h1></div></div>
+<div class="card table-wrap"><table class="data">
+<thead><tr><th>Order · placed</th><th>What you ordered, from whom</th><th>Payment</th><th class="num">Total</th><th></th></tr></thead>
+<tbody>{% for o in page %}<tr>
+  <td class="nowrap"><a href="{% url 'orders:order_detail' o.pk %}"><strong>{{ o.number }}</strong></a><div class="small muted">{{ o.order_date|date:"d M Y" }} {{ o.created_at|date:"H:i" }}<br>{{ o.get_delivery_method_display }}</div></td>
+  <td>{% for s in o.suborders.all %}<div style="margin-bottom:6px"><strong>{{ s.farmer.farm.farm_name }}</strong> <span class="small muted">{{ s.farmer.farm.town }}</span> <span class="badge s-{{ s.status }}">{{ s.get_status_display }}</span>{% include "orders/_order_lines.html" %}</div>{% endfor %}</td>
+  <td><span class="badge {{ o.payment.badge }}">{{ o.payment.status_label }}</span><div class="small muted">{{ o.get_payment_method_display }}</div></td>
+  <td class="num">{{ o.grand_total|rand }}</td>
+  <td class="right"><form method="post" action="{% url 'orders:reorder' o.pk %}">{% csrf_token %}<button class="btn secondary small">Buy again</button></form></td></tr>{% empty %}<tr><td colspan="5" class="empty">No orders yet. <a href="{% url 'marketplace:catalog' %}">Start shopping</a>.</td></tr>{% endfor %}</tbody></table></div>
+{% include "includes/pagination.html" %}
+{% endblock %}

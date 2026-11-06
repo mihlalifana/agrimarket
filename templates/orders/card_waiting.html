@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Waiting for {{ order.payment.gateway_name }}{% endblock %}
+{% block content %}
+<div class="auth-box card" style="text-align:center">
+  <h1>Waiting for {{ order.payment.gateway_name }} to confirm</h1>
+  <p>Order <strong>{{ order.number }}</strong> · <strong>{{ order.grand_total|rand }}</strong></p>
+  <p class="small muted">If you completed the payment on Paystack, press the button to confirm it.</p>
+  <form method="post" action="{% url 'orders:card_check' order.pk %}">{% csrf_token %}<button class="btn block">Check with {{ order.payment.gateway_name }} now</button></form>
+  <p class="small muted" style="margin-top:10px">If the payment did not go through, go to the order and use 'Pay now' to try again.</p>
+  <p class="small"><a href="{% url 'orders:order_detail' order.pk %}">Go to the order</a></p>
+</div>
+{% endblock %}

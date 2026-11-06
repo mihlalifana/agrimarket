@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block title %}Fields{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Fields</h1><p>Your land, so every planting and harvest can be traced to where it grew.</p></div></div>
+{% include "farm/_nav.html" %}
+<div class="split">
+  <div class="card table-wrap"><table class="data"><thead><tr><th>Field</th><th class="num">Size</th><th>Soil</th><th>Irrigated</th><th>Crops</th><th></th></tr></thead>
+  <tbody>{% for f in rows %}<tr data-id="{{ f.pk }}"><td><strong>{{ f.name }}</strong>{% if f.notes %}<div class="small muted">{{ f.notes|truncatechars:60 }}</div>{% endif %}</td><td class="num">{{ f.size_ha }} ha</td><td>{{ f.soil_type|default:"—" }}</td><td>{{ f.irrigated|yesno:"Yes,No" }}</td>
+  <td class="small">{% for p in f.plantings.all|slice:":3" %}<div><a href="{% url 'farm:planting' p.pk %}">{{ p.commodity }}</a> {{ p.season }}</div>{% empty %}—{% endfor %}</td>
+  <td class="right"><details class="inline-edit"><summary class="btn secondary small">Edit</summary>
+    <form method="post" action="{% url 'farm:field_edit' f.pk %}" novalidate style="text-align:left;min-width:240px">{% csrf_token %}{% with form=f.edit_form %}{% include "includes/form.html" %}{% endwith %}<button class="btn small">Save</button></form></details></td></tr>
+  {% empty %}<tr><td colspan="6" class="empty">No fields yet. Add your first field.</td></tr>{% endfor %}</tbody></table></div>
+  <form method="post" class="card" novalidate>{% csrf_token %}<h2>Add a field</h2>{% include "includes/form.html" %}<button class="btn block">Add field</button></form>
+</div>
+{% endblock %}

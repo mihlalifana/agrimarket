@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% block title %}Audit log{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Audit log</h1><p>Read-only record of every change. Entries cannot be edited or deleted.</p></div></div>
+<form class="card inline-fields" method="get">
+  <input class="input" name="q" value="{{ request.GET.q }}" placeholder="User, object">
+  <select class="input" name="action"><option value="">All actions</option>{% for v, l in actions %}<option value="{{ v }}" {% if request.GET.action == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <input class="input" type="date" name="start" value="{{ request.GET.start }}"><input class="input" type="date" name="end" value="{{ request.GET.end }}">
+  <button class="btn secondary">Filter</button></form><br>
+<div class="card table-wrap"><table class="data"><thead><tr><th>When</th><th>User</th><th>Action</th><th>Object</th><th>Field</th><th>Old</th><th>New</th></tr></thead>
+<tbody>{% for e in page %}<tr><td class="nowrap">{{ e.created_at|date:"d M Y H:i:s" }}</td><td>{{ e.user.email|default:"system" }}</td><td>{{ e.get_action_display }}</td><td>{{ e.object_type }} #{{ e.object_id }}<div class="small muted">{{ e.object_repr|truncatechars:50 }}</div></td><td>{{ e.field }}</td><td class="small">{{ e.old_value|truncatechars:40 }}</td><td class="small">{{ e.new_value|truncatechars:40 }}</td></tr>
+{% empty %}<tr><td colspan="7" class="empty">No entries.</td></tr>{% endfor %}</tbody></table></div>
+{% include "includes/pagination.html" %}
+{% endblock %}

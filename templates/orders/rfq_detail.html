@@ -1,0 +1,31 @@
+{% extends "base.html" %}{% load agri %}{% block title %}{{ rfq.number }}{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'orders:rfq_list' %}">← Quote requests</a></p>
+<div class="page-head"><div><h1>{{ rfq.number }}: {{ rfq.quantity|qty }} {{ rfq.unit }} {{ rfq.commodity }}{% if rfq.grade %} ({{ rfq.grade }}){% endif %}</h1>
+  <p>Needed by {{ rfq.needed_by|date:"d M Y" }} · deliver to {{ rfq.get_delivery_province_display }} · posted {{ rfq.created_at|date:"d M Y" }} · <span class="badge {% if rfq.status == 'open' %}wheat{% else %}grey{% endif %}">{{ rfq.get_status_display }}</span></p></div>
+  {% if user == rfq.buyer and rfq.status == 'open' %}<form method="post" action="{% url 'orders:rfq_close' rfq.pk %}" onsubmit="return confirm('Close this request without accepting a quote?')">{% csrf_token %}<button class="btn danger small">Close request</button></form>{% endif %}</div>
+{% if rfq.notes %}<div class="card"><strong>Buyer's notes:</strong> {{ rfq.notes|linebreaksbr }}</div>{% endif %}
+<div class="split">
+  <div class="card"><h2>{% if user.is_farmer %}My quote{% else %}Quotes received{% endif %}</h2>
+    <div class="table-wrap"><table class="data"><thead><tr>{% if not user.is_farmer %}<th>Farm</th>{% endif %}<th>Batch</th><th>Grade</th><th class="num">Price / {{ rfq.unit }}</th><th class="num">Total (excl. VAT)</th><th>Status</th></tr></thead>
+    <tbody>{% for q in quotes %}<tr>{% if not user.is_farmer %}<td><a href="{% url 'marketplace:farmer_page' q.farmer.pk %}">{{ q.farmer.farm.farm_name }}</a><div class="small muted">{{ q.farmer.farm.town }}, {{ q.farmer.farm.get_province_display }}{% if q.farmer.farm.is_vat_registered %} · + VAT{% endif %}</div>{% if q.note %}<div class="small">“{{ q.note }}”</div>{% endif %}</td>{% endif %}
+      <td><a href="{% url 'marketplace:listing' q.listing.pk %}">{{ q.listing.batch_number }}</a></td><td>{{ q.listing.grade|default:"—" }}</td><td class="num"><strong>{{ q.unit_price|rand }}</strong></td><td class="num">{{ q.total|rand }}</td>
+      <td><span class="badge {% if q.status == 'accepted' %}{% elif q.status == 'submitted' %}wheat{% else %}grey{% endif %}">{{ q.get_status_display }}</span>{% if q.order %} <a class="small" href="{% url 'orders:order_detail' q.order.pk %}">{{ q.order.number }}</a>{% endif %}</td></tr>
+      {% if user == rfq.buyer and rfq.status == 'open' and q.status == 'submitted' %}<tr><td colspan="6">
+        <details><summary class="btn small">Accept this quote</summary>
+        <form method="post" action="{% url 'orders:quote_accept' q.pk %}" class="stack" novalidate>{% csrf_token %}
+          {% with form=accept_form %}{% for field in form %}{% if gateway and field.name in "card_number card_expiry card_cvv order_date" %}{% else %}{% include "includes/field.html" %}{% endif %}{% endfor %}{% endwith %}
+          <button class="btn">Accept and place order</button>
+          <p class="small muted">The order is created at {{ q.unit_price|rand }}/{{ rfq.unit }}.{% if gateway %} Card payments are completed on the secure payment page.{% endif %}</p></form></details></td></tr>{% endif %}
+    {% empty %}<tr><td colspan="6" class="empty">{% if user.is_farmer %}You haven't quoted yet.{% else %}No quotes yet. Farms have been notified.{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+    {% if user.is_farmer %}<p class="small muted">Other farms' prices are not shown to you.</p>{% endif %}
+  </div>
+  <aside class="stack">
+    <div class="card"><h3>Market price guide</h3>{% if guide %}<p>Recent average <strong>{{ guide.avg|rand }}/{{ rfq.unit }}</strong> ({{ guide.scope }})<br><span class="small muted">range {{ guide.low|rand }} – {{ guide.high|rand }}, {{ guide.farms }} farms, last 90 days</span></p>{% else %}<p class="muted small">Not enough recent sales from different farms to show a market price.</p>{% endif %}</div>
+    {% if qform %}<div class="card"><h3>{% if my_quote %}Update my quote{% else %}Send a quote{% endif %}</h3>
+      {% if qform.fields.listing.queryset.exists %}<form method="post" novalidate>{% csrf_token %}{% with form=qform %}{% include "includes/form.html" %}{% endwith %}<button class="btn block">{% if my_quote %}Update quote{% else %}Send quote{% endif %}</button></form>
+      {% else %}<p class="small">You need an active listing of {{ rfq.commodity }}{% if rfq.grade %} grade {{ rfq.grade }}{% endif %} sold per {{ rfq.unit }} with at least {{ rfq.quantity|qty }} {{ rfq.unit }} in stock to quote.</p>
+      <a class="btn secondary block" href="{% url 'marketplace:my_listings' %}#add-{% if rfq.unit == 'head' %}livestock{% else %}produce{% endif %}">List stock</a>{% endif %}</div>{% endif %}
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}{% load agri %}{% block title %}{{ sub.order.number }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ sub.order.number }} · {{ sub.farmer.farm.farm_name }}</h1>
+  <p>Order date {{ sub.order.order_date|date:"d M Y" }} · {{ sub.order.get_delivery_method_display }} · Payment: <span class="badge {{ sub.order.payment.badge }}">{{ sub.order.payment.status_label }}</span> ({{ sub.order.get_payment_method_display }})</p></div>
+  <span class="badge s-{{ sub.status }}" style="font-size:.9rem">{{ sub.get_status_display }}</span></div>
+{% if sub.progress %}<div class="steps">{% for label, state in sub.progress %}<span class="{{ state }}">{{ label }}</span>{% endfor %}</div>{% endif %}
+{% include "orders/_order_summary.html" with order=sub.order %}
+<div class="split">
+  <div class="card">
+    <h2>{% if user == sub.farmer %}What {{ sub.order.buyer.first_name }} ordered from you{% else %}Ordered from {{ sub.farmer.farm.farm_name }}{% endif %}</h2>
+    {% include "orders/_sub_detail.html" with s=sub %}
+  </div>
+  <aside class="stack">
+    <div class="card"><h3>Actions</h3>
+      {% if sub.invoice_number %}<p><a class="btn secondary block" target="_blank" href="{% url 'orders:invoice' sub.pk %}">Invoice {{ sub.invoice_number }}</a></p>{% endif %}
+      {% if user == sub.farmer %}
+        {% if sub.status == "pending" %}
+          <p class="small">Waiting for the buyer's card payment on {{ sub.order.payment.gateway_name }}. Your stock is reserved and you will be notified as soon as the money is confirmed — then pack the order.</p>
+        {% elif sub.status == "approved" %}
+          <p class="small">Paid and confirmed — pack the goods.</p>
+          <form method="post" action="{% url 'orders:suborder_action' sub.pk 'pack' %}" class="stack">{% csrf_token %}{% include "orders/_step_date.html" %}<button class="btn block">Mark packed / ready</button></form>
+          <details class="panel" style="margin-top:10px"><summary class="small">Can't supply this order?</summary>
+            <form method="post" action="{% url 'orders:suborder_action' sub.pk 'reject' %}" class="stack" style="margin-top:8px">{% csrf_token %}{% include "orders/_step_date.html" %}<input class="input" name="note" placeholder="Reason, e.g. hail damaged the crop" required><button class="btn danger block">Cancel and refund the buyer</button></form>
+          </details>
+        {% elif sub.status == "packed" and not sub.is_delivery %}
+          <form method="post" action="{% url 'orders:suborder_action' sub.pk 'collected' %}" class="stack">{% csrf_token %}{% include "orders/_step_date.html" %}<input class="input" name="note" placeholder="Collected by (name)" required><button class="btn block">Mark collected</button></form>
+        {% elif sub.status == "disputed" and dispute %}
+          <p class="small"><strong>The buyer has a complaint.</strong> Answer it: refund in full, refund part, or explain why not.</p>
+          <a class="btn wheat block" href="{% url 'orders:dispute_detail' dispute.pk %}">Answer the complaint</a>
+        {% else %}<p class="muted small">No action needed from you now.</p>{% endif %}
+        {% if dispute and sub.status != "disputed" %}<p class="small"><a href="{% url 'orders:dispute_detail' dispute.pk %}">Complaint: {{ dispute.get_status_display }}</a></p>{% endif %}
+        {% if sub.is_delivery and sub.status == "approved" or sub.is_delivery and sub.status == "packed" %}
+          <hr><h4>Schedule the driver to collect</h4>
+          <p class="small muted">Only available drivers from your farm's province can be selected.</p>
+          <form method="post" action="{% url 'orders:schedule' sub.pk %}" novalidate>{% csrf_token %}{% with form=farmer_schedule_form %}{% include "includes/form.html" %}{% endwith %}<button class="btn secondary block">Schedule driver</button></form>
+        {% endif %}
+      {% elif user == sub.distributor %}
+        <p class="small muted">The farmer will schedule your collection date and time.</p>
+        {% if sub.status == "packed" %}<form method="post" action="{% url 'orders:suborder_action' sub.pk 'ship' %}" class="stack">{% csrf_token %}{% include "orders/_step_date.html" %}<button class="btn block">Collected from farm — in transit</button></form>
+        {% elif sub.status == "in_transit" %}<form method="post" action="{% url 'orders:suborder_action' sub.pk 'deliver' %}" class="stack">{% csrf_token %}{% include "orders/_step_date.html" %}<input class="input" name="note" placeholder="Received by (name)" required><button class="btn block">Mark delivered</button></form>
+        {% elif sub.status == "approved" %}<p class="small muted">Waiting for the farmer to pack the order.</p>{% endif %}
+      {% endif %}
+    </div>
+    <div class="card small"><h3>Money</h3><dl class="facts">
+      <dt>Goods</dt><dd>{{ sub.goods_subtotal|rand }}</dd><dt>VAT</dt><dd>{{ sub.vat_amount|rand }}</dd><dt>Delivery</dt><dd>{{ sub.delivery_fee|rand }}</dd>
+      {% if sub.status == "completed" %}<dt>Commission</dt><dd>{{ sub.commission_amount|rand }}</dd>{% endif %}
+      {% if sub.paid_to_farm %}<dt>Paid to the farm</dt><dd>{{ sub.farm_share|rand }}<div class="muted">straight into the farm's bank by Paystack{% if sub.recovered %}; {{ sub.recovered|rand }} kept back to repay earlier refunds{% endif %}</div></dd>{% endif %}
+      {% for r in refunds %}<dt>Refund</dt><dd>{{ r.amount|rand }} · {{ r.get_status_display }}<div class="muted">farm's part {{ r.farm_amount|rand }}, AgriMarket's part {{ r.platform_amount|rand }}{% if r.problem %}<br>Paystack: {{ r.problem }}{% endif %}</div></dd>{% endfor %}</dl></div>
+  </aside>
+</div>
+{% endblock %}

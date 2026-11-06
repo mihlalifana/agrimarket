@@ -1,0 +1,8 @@
+{% extends "base.html" %}{% block title %}Message log{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>SMS and email log</h1><p>Every SMS and email the system sent, newest first.</p></div></div>
+<div class="card table-wrap"><table class="data"><thead><tr><th>When</th><th>Channel</th><th>To</th><th>Message</th></tr></thead>
+<tbody>{% for m in page %}<tr><td class="nowrap">{{ m.created_at|date:"d M H:i" }}</td><td><span class="badge {% if m.channel == 'sms' %}wheat{% else %}info{% endif %}">{{ m.get_channel_display }}</span></td><td>{{ m.recipient }}</td><td>{% if m.subject %}<strong>{{ m.subject }}</strong><br>{% endif %}{{ m.text }}</td></tr>
+{% empty %}<tr><td colspan="4" class="empty">No messages yet.</td></tr>{% endfor %}</tbody></table></div>
+{% include "includes/pagination.html" %}
+{% endblock %}

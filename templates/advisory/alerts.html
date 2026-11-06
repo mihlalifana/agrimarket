@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% load agri %}{% block title %}Pest alerts{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Pest and disease alerts</h1><p>{% if user.is_farmer %}Warnings from agronomists for {{ user.get_province_display }}.{% else %}Warn every farm growing a crop in a province. Farmers get a notification{% if form %} and an SMS for warnings and outbreaks{% endif %}.{% endif %}</p></div></div>
+{% if form %}<details class="panel" id="new-alert" {% if form.errors %}open{% endif %}><summary>+ New alert</summary>
+  <form method="post" novalidate>{% csrf_token %}{% include "includes/form.html" %}<button class="btn">Send alert</button></form></details>{% endif %}
+<div class="card table-wrap"><table class="data"><thead><tr><th>Sent</th><th>Alert</th><th>Crop</th><th>Province</th><th>Until</th>{% if not user.is_farmer %}<th class="num">Farms told</th>{% endif %}</tr></thead>
+<tbody>{% for a in rows %}<tr data-id="{{ a.pk }}" class="{% if not a.is_current %}muted{% endif %}"><td>{{ a.created_at|date:"d M Y" }}</td>
+<td><span class="badge {% if a.severity == 'outbreak' %}danger{% elif a.severity == 'warning' %}wheat{% else %}grey{% endif %}">{{ a.get_severity_display }}</span> <strong>{{ a.title }}</strong><div class="small">{{ a.message }}</div><div class="small muted">{{ a.agronomist.get_full_name }}</div></td>
+<td>{{ a.commodity }}</td><td>{{ a.get_province_display }}</td><td>{{ a.valid_until|date:"d M" }}{% if not a.is_current %}<div class="small">ended</div>{% endif %}</td>{% if not user.is_farmer %}<td class="num">{{ a.farms_told }}</td>{% endif %}</tr>
+{% empty %}<tr><td colspan="6" class="empty">No alerts.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

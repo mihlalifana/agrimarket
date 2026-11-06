@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+db.sqlite3
+test_db.sqlite3
+media/
+staticfiles/
+errors.log
+.venv/
+venv/
+
+email_settings.bat
+demo_db.sqlite3
